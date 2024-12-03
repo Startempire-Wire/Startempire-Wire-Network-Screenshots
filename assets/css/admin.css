@@ -1,0 +1,42 @@
+.sewn-dashboard-wrapper {
+    margin-top: 20px;
+}
+
+.sewn-card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.sewn-api-key-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.sewn-api-key-wrapper input {
+    flex: 1;
+    background: #f5f5f5;
+}
+
+.sewn-log-viewer {
+    max-height: 400px;
+    overflow-y: auto;
+    background: #f5f5f5;
+    padding: 15px;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.sewn-log-entry {
+    margin-bottom: 5px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}
+
+.sewn-log-entry:last-child {
+    border-bottom: none;
+}

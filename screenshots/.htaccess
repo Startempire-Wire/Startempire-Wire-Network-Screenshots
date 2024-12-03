@@ -1,0 +1,2 @@
+# Deny direct access to screenshots
+Deny from all

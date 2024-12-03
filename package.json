@@ -1,0 +1,20 @@
+{
+  "name": "startempire-wire-network-screenshots",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "WordPress plugin for capturing and managing website screenshots.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "sharp": "^0.33.0"
+  },
+  "keywords": [
+    "wordpress",
+    "screenshots",
+    "webring"
+  ],
+  "author": "",
+  "license": "ISC"
+}
