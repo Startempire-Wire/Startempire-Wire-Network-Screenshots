@@ -106,10 +106,22 @@ class SEWN_Screenshots {
     }
 
     public function register_endpoints() {
-        register_rest_route('startempire/v1', '/screenshot', [
+        register_rest_route('sewn/v1', '/screenshot', [
             'methods' => 'POST',
             'callback' => [$this, 'handle_screenshot_request'],
             'permission_callback' => [$this, 'verify_api_request']
+        ]);
+
+        register_rest_route('sewn/v1', '/auth/connect', [
+            'methods' => 'GET',
+            'callback' => 'handle_network_auth',
+            'permission_callback' => '__return_true'
+        ]);
+        
+        register_rest_route('sewn/v1', '/auth/exchange', [
+            'methods' => 'POST',
+            'callback' => 'exchange_parent_token',
+            'permission_callback' => '__return_true'
         ]);
     }
 
