@@ -6,6 +6,14 @@ import fs from 'fs/promises';
 
 const execAsync = promisify(exec);
 
+class ScreenshotError extends Error {
+    constructor(message, code, context = {}) {
+        super(message);
+        this.code = code;
+        this.context = context;
+    }
+}
+
 export class ScreenshotService {
     constructor(outputDir = 'screenshots') {
         this.outputDir = outputDir;
@@ -18,15 +26,29 @@ export class ScreenshotService {
     }
 
     async takeScreenshot(url, filename, options = {}) {
-        const {
-            width = 1024,
-            height = 768,
-            quality = 90,
-            delay = 1000,
-            format = 'png'
-        } = options;
+        if (!url) {
+            throw new ScreenshotError('URL is required', 'INVALID_URL');
+        }
 
         try {
+            // Validate dependencies first
+            const status = await this.checkDependencies();
+            if (!status.available) {
+                throw new ScreenshotError(
+                    'Screenshot service unavailable',
+                    'SERVICE_UNAVAILABLE',
+                    status
+                );
+            }
+
+            const {
+                width = 1024,
+                height = 768,
+                quality = 90,
+                delay = 1000,
+                format = 'png'
+            } = options;
+
             const outputPath = path.join(this.outputDir, filename);
             const tempPath = `${outputPath}.temp.${format}`;
 
@@ -68,12 +90,15 @@ export class ScreenshotService {
                 }
             };
         } catch (error) {
-            return {
-                success: false,
-                error: error.message,
-                url: url,
-                timestamp: new Date().toISOString()
-            };
+            if (error instanceof ScreenshotError) {
+                throw error;
+            }
+            
+            throw new ScreenshotError(
+                'Screenshot capture failed',
+                'CAPTURE_FAILED',
+                { originalError: error.message }
+            );
         }
     }
 

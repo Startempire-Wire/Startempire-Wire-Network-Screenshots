@@ -109,7 +109,19 @@ class SEWN_Screenshots {
         register_rest_route('sewn/v1', '/screenshot', [
             'methods' => 'POST',
             'callback' => [$this, 'handle_screenshot_request'],
-            'permission_callback' => [$this, 'verify_api_request']
+            'permission_callback' => [$this, 'verify_api_request'],
+            'args' => [
+                'url' => [
+                    'required' => true,
+                    'validate_callback' => function($param) {
+                        return filter_var($param, FILTER_VALIDATE_URL);
+                    }
+                ],
+                'type' => [
+                    'default' => 'full',
+                    'enum' => ['full', 'preview']
+                ]
+            ]
         ]);
 
         register_rest_route('sewn/v1', '/auth/connect', [
@@ -123,6 +135,14 @@ class SEWN_Screenshots {
             'callback' => 'exchange_parent_token',
             'permission_callback' => '__return_true'
         ]);
+
+        register_rest_route('sewn/v1', '/preview/screenshot', [
+            'methods' => 'GET',
+            'callback' => [$this, 'get_preview_screenshot'],
+            'permission_callback' => '__return_true'
+        ]);
+
+        
     }
 
     public function verify_api_request($request) {
@@ -132,15 +152,23 @@ class SEWN_Screenshots {
 
     public function handle_screenshot_request($request) {
         $url = $request->get_param('url');
+        $type = $request->get_param('type');
         
-        if (!filter_var($url, FILTER_VALIDATE_URL)) {
-            return new WP_Error('invalid_url', 'Invalid URL provided', ['status' => 400]);
-        }
-
         try {
-            // Implementation of screenshot capture
-            // This will be expanded in the screenshot service
-            return ['success' => true];
+            $screenshot = new ScreenshotService();
+            $options = $type === 'preview' ? [
+                'width' => 800,
+                'height' => 600,
+                'quality' => 60
+            ] : [];
+            
+            $result = await $screenshot->takeScreenshot(
+                $url,
+                uniqid() . '.jpg',
+                $options
+            );
+            
+            return rest_ensure_response($result);
         } catch (Exception $e) {
             $this->logger->error('Screenshot capture failed', [
                 'url' => $url,
@@ -148,6 +176,21 @@ class SEWN_Screenshots {
             ]);
             return new WP_Error('capture_failed', $e->getMessage(), ['status' => 500]);
         }
+    }
+
+    public function get_preview_screenshot($request) {
+        // Generate low-res/watermarked preview
+        $url = $request->get_param('url');
+        // Implementation details...
+    }
+
+    public function get_full_screenshot($request) {
+        // Generate full quality screenshot
+        // Implementation details...
+    }
+
+    public function check_auth($request) {
+        return current_user_can('access_sewn_network');
     }
 
     public function deactivate() {
