@@ -1,0 +1,13 @@
+{
+    "require": {
+        "chrome-php/chrome": "^1.9.0",
+        "php": ">=7.4"
+    },
+    "config": {
+        "platform": {
+            "php": "7.4"
+        },
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+} 

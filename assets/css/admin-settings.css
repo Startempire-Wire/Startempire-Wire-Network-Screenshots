@@ -1,0 +1,171 @@
+.sewn-sortable {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-width: 400px;
+}
+
+.sewn-sortable li {
+    padding: 10px;
+    margin: 5px 0;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    cursor: move;
+}
+
+.sewn-test-section {
+    margin-top: 30px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.sewn-test-controls {
+    margin-bottom: 20px;
+}
+
+#sewn-test-url {
+    width: 100%;
+    max-width: 500px;
+    margin-right: 10px;
+}
+
+.sewn-test-options {
+    margin: 20px 0;
+    padding: 15px;
+    background: #f9f9f9;
+    border: 1px solid #e5e5e5;
+}
+
+.sewn-test-options h3 {
+    margin-top: 0;
+}
+
+#sewn-test-result {
+    margin-top: 20px;
+}
+
+#sewn-test-result img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ddd;
+    margin-top: 10px;
+}
+
+.sewn-test-options input[type="number"] {
+    width: 100px;
+}
+
+.notice {
+    margin: 20px 0;
+}
+
+.sewn-toggle-visibility {
+    margin-left: 5px;
+}
+
+.sewn-loading {
+    text-align: center;
+    padding: 20px;
+}
+
+.sewn-loading .spinner {
+    float: none;
+    margin: 0 auto;
+    display: block;
+}
+
+.screenshot-preview {
+    margin-top: 15px;
+    padding: 10px;
+    background: #f9f9f9;
+    border: 1px solid #e5e5e5;
+}
+
+.screenshot-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.screenshot-preview img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ddd;
+    margin-top: 10px;
+}
+
+.retry-screenshot {
+    margin-top: 10px !important;
+}
+
+.reset-options {
+    margin-left: 10px !important;
+}
+
+.sewn-api-keys {
+    margin: 20px 0;
+}
+
+.api-key-row {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.api-key-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.api-key-field input[type="password"],
+.api-key-field input[type="text"] {
+    flex: 1;
+    min-width: 260px;
+}
+
+.api-feedback {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.api-feedback .notice {
+    margin: 5px 0;
+}
+
+.api-feedback .spinner {
+    float: none;
+    margin: 0;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    margin: 5px 0;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.status-dot.active {
+    background: #46b450;
+}
+
+.status-dot.inactive {
+    background: #dc3232;
+}
+
+.status-message {
+    color: #dc3232;
+    font-size: 12px;
+    margin-left: 10px;
+} 

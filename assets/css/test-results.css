@@ -1,0 +1,89 @@
+.sewn-test-controls {
+    margin: 20px 0;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.sewn-test-select {
+    min-width: 200px;
+}
+
+.sewn-test-results {
+    margin: 20px 0;
+}
+
+.test-result {
+    margin: 10px 0;
+    padding: 15px;
+    background: #fff;
+    border-left: 4px solid #ccc;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.test-result.pass {
+    border-left-color: #46b450;
+}
+
+.test-result.fail {
+    border-left-color: #dc3232;
+}
+
+.test-result pre {
+    background: #f9f9f9;
+    padding: 10px;
+    margin: 10px 0;
+    overflow: auto;
+    max-height: 200px;
+}
+
+.test-summary {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f9f9f9;
+    border: 1px solid #ccd0d4;
+}
+
+.sewn-test-log {
+    margin-top: 20px;
+}
+
+.sewn-test-log pre {
+    background: #f9f9f9;
+    padding: 15px;
+    margin: 10px 0;
+    overflow: auto;
+    max-height: 300px;
+    border: 1px solid #ccd0d4;
+}
+
+.test-details {
+    margin: 10px 0;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.test-details p {
+    margin: 5px 0;
+}
+
+.options-details {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.options-details h5 {
+    margin: 0 0 10px 0;
+    color: #23282d;
+}
+
+.options-details ul {
+    margin: 0;
+    padding: 0 0 0 20px;
+}
+
+.options-details li {
+    margin: 5px 0;
+} 
