@@ -10,6 +10,7 @@ class SEWN_Admin {
 
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
         add_action('admin_init', [$this, 'init_admin']);
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
     }
 
     public function init_admin() {
@@ -292,5 +293,29 @@ class SEWN_Admin {
         } else {
             echo '<p>No tests run yet</p>';
         }
+    }
+
+    public function enqueue_scripts() {
+        wp_enqueue_script(
+            'sewn-api-tester',
+            SEWN_SCREENSHOTS_URL . 'assets/js/api-tester-enhanced.js',
+            array('jquery'),
+            SEWN_SCREENSHOTS_VERSION,
+            true
+        );
+
+        // Properly localize the script with all required data
+        wp_localize_script('sewn-api-tester', 'sewnApiTester', array(
+            'restUrl' => trailingslashit(rest_url()),
+            'apiBase' => 'sewn-screenshots/v1',
+            'nonce' => wp_create_nonce('wp_rest'),
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'homeUrl' => home_url(),
+            'debug' => WP_DEBUG,
+            'version' => SEWN_SCREENSHOTS_VERSION
+        ));
+
+        // Add REST API support to the page
+        wp_enqueue_script('wp-api');
     }
 } 

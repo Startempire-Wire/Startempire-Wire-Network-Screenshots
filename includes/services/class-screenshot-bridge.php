@@ -6,6 +6,25 @@ class SEWN_Screenshot_Bridge {
     public function __construct($logger) {
         $this->node_script = SEWN_SCREENSHOTS_PATH . 'includes/services/screenshot.mjs';
         $this->logger = $logger;
+        
+        // Check Node.js installation
+        exec('node --version', $output, $return_var);
+        if ($return_var !== 0) {
+            $this->logger->error('Node.js is not installed or accessible');
+        } else {
+            $this->logger->debug('Node.js version: ' . $output[0]);
+        }
+        
+        // Check if script exists and is executable
+        if (!file_exists($this->node_script)) {
+            $this->logger->error('Screenshot service script not found', [
+                'path' => $this->node_script
+            ]);
+        } elseif (!is_readable($this->node_script)) {
+            $this->logger->error('Screenshot service script is not readable', [
+                'path' => $this->node_script
+            ]);
+        }
     }
     
     public function take_screenshot($url, $options = []) {

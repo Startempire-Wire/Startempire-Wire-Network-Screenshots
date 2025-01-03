@@ -178,4 +178,34 @@ class SEWN_Settings {
         $settings[$key] = $value;
         update_option('sewn_settings', $settings);
     }
+
+    public function render_advanced_settings() {
+        ?>
+        <div class="sewn-settings-section">
+            <h3>Advanced Settings</h3>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="sewn_cleanup_on_deactivate">
+                            <?php _e('Cleanup on Deactivation', 'startempire-wire-network-screenshots'); ?>
+                        </label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox" 
+                                   name="sewn_cleanup_on_deactivate" 
+                                   id="sewn_cleanup_on_deactivate"
+                                   value="1"
+                                   <?php checked(get_option('sewn_cleanup_on_deactivate', false)); ?>>
+                            <?php _e('Delete all plugin data when deactivating', 'startempire-wire-network-screenshots'); ?>
+                        </label>
+                        <p class="description">
+                            <?php _e('Warning: This will permanently delete all screenshots, logs, and settings.', 'startempire-wire-network-screenshots'); ?>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <?php
+    }
 }

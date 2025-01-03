@@ -7,13 +7,16 @@ class SEWN_Dashboard {
     private $settings;
     private $api_tester;
     private $api_manager;
+    private $screenshot_service;
 
-    public function __construct($logger, $settings, $api_tester = null, $api_manager = null) {
+    public function __construct($logger, $settings, $api_tester, $api_manager) {
         $this->logger = $logger;
         $this->settings = $settings;
         $this->api_tester = $api_tester;
         $this->api_manager = $api_manager;
-        add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
+        
+        // Ensure the screenshots table exists
+        add_action('admin_init', [$this, 'create_screenshots_table']);
     }
 
     public function enqueue_admin_scripts($hook) {
@@ -66,6 +69,38 @@ class SEWN_Dashboard {
                 'usage_stats' => $usage_stats
             ]);
 
+            // Fetch existing stats
+            $cache_stats = $this->get_cache_stats(); // already calls calculate_cache_hit_rate()
+            $storage_stats = $this->get_storage_stats(); // for total files, size, etc.
+
+            // Gather API key info
+            $current_service = $this->api_manager ? $this->api_manager->get_current_service() : '';
+            $current_api_key = $this->api_manager ? $this->api_manager->get_current_api_key() : '';
+
+            // Determine screenshot types (local plus any fallback)
+            $available_types = [];
+            if ($this->screenshot_service && $this->screenshot_service->is_local_enabled()) {
+                $available_types[] = 'Local (wkhtmltoimage)';
+            }
+            if ($this->api_manager) {
+                foreach ($this->api_manager->get_available_fallback_services() as $slug => $service) {
+                    if (!$service['requires_key'] || get_option('sewn_fallback_api_key', '')) {
+                        $available_types[] = $service['name'] . ' (' . $slug . ')';
+                    }
+                }
+            }
+
+            // Fetch recent activity
+            $recent_requests = [];
+            if ($this->api_manager && method_exists($this->api_manager, 'get_recent_requests')) {
+                $recent_requests = $this->api_manager->get_recent_requests(5);
+            }
+
+            $stats = $this->get_usage_statistics();
+            $api_status = $this->get_api_key_status();
+            $types = $this->get_screenshot_types();
+            $recent = $this->get_recent_activity();
+
             ?>
             <div class="wrap">
                 <h1>Screenshot Service Dashboard</h1>
@@ -75,50 +110,54 @@ class SEWN_Dashboard {
                     <?php $this->logger->debug('Rendering quick stats section'); ?>
                     <div class="sewn-card">
                         <h2>Quick Statistics</h2>
-                        <div class="sewn-stats-grid">
+                        <div class="stats-grid">
                             <div class="stat-item">
-                                <span class="stat-label">Storage Used</span>
-                                <span class="stat-value"><?php echo esc_html($storage_stats['used_formatted']); ?></span>
-                            </div>
-                            <div class="stat-item">
+                                <span class="stat-value"><?php echo esc_html($stats['total_screenshots']); ?></span>
                                 <span class="stat-label">Total Screenshots</span>
-                                <span class="stat-value"><?php echo esc_html($storage_stats['total_files']); ?></span>
                             </div>
                             <div class="stat-item">
-                                <span class="stat-label">Cache Hit Rate</span>
-                                <span class="stat-value"><?php echo esc_html($storage_stats['cache_hit_rate']); ?>%</span>
+                                <span class="stat-value"><?php echo esc_html($stats['success_rate']); ?>%</span>
+                                <span class="stat-label">Success Rate</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value"><?php echo esc_html($stats['api_usage']); ?></span>
+                                <span class="stat-label">API Calls This Month</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- API Key Section -->
+                    <!-- API Key Status -->
                     <?php $this->logger->debug('Rendering API key section'); ?>
                     <div class="sewn-card">
-                        <h2>API Key</h2>
-                        <div class="sewn-api-key-wrapper">
-                            <input type="text" readonly value="<?php echo esc_attr($all_settings['api_key']); ?>" class="regular-text">
-                            <button type="button" class="button button-secondary" id="sewn-regenerate-key">
-                                Regenerate Key
-                            </button>
-                            <?php wp_nonce_field('sewn_api_management', 'sewn_api_nonce'); ?>
+                        <h2>API Key Status</h2>
+                        <div class="api-status">
+                            <div class="key-status <?php echo esc_attr($api_status['primary_key']['status']); ?>">
+                                <span class="status-dot"></span>
+                                <span>Primary API Key: <?php echo $api_status['primary_key']['exists'] ? 'Active' : 'Not Set'; ?></span>
+                            </div>
+                            <div class="key-status <?php echo esc_attr($api_status['fallback_key']['status']); ?>">
+                                <span class="status-dot"></span>
+                                <span>Fallback Key (<?php echo esc_html($api_status['fallback_key']['provider']); ?>): 
+                                      <?php echo $api_status['fallback_key']['exists'] ? 'Active' : 'Not Set'; ?></span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Screenshot Types Stats -->
+                    <!-- Screenshot Types -->
                     <?php $this->logger->debug('Rendering screenshot types section', ['stats' => $usage_stats]); ?>
                     <div class="sewn-card">
                         <h2>Screenshot Types</h2>
-                        <div class="sewn-stats-grid">
-                            <div class="stat-item">
-                                <span class="stat-label">Preview Screenshots</span>
-                                <span class="stat-value"><?php echo esc_html($usage_stats['preview_count']); ?></span>
-                                <small>Lower quality with watermark</small>
+                        <div class="types-grid">
+                            <?php foreach ($types as $type): ?>
+                            <div class="type-item">
+                                <h3><?php echo esc_html(ucfirst($type['type'])); ?></h3>
+                                <div class="type-stats">
+                                    <span>Count: <?php echo esc_html($type['count']); ?></span>
+                                    <span>Success: <?php echo esc_html($type['success_rate']); ?>%</span>
+                                    <span>Avg Time: <?php echo esc_html($type['avg_time']); ?>s</span>
+                                </div>
                             </div>
-                            <div class="stat-item">
-                                <span class="stat-label">Full Screenshots</span>
-                                <span class="stat-value"><?php echo esc_html($usage_stats['full_count']); ?></span>
-                                <small>Premium high quality</small>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
 
@@ -126,11 +165,14 @@ class SEWN_Dashboard {
                     <?php $this->logger->debug('Rendering recent activity section', ['log_count' => count($recent_logs)]); ?>
                     <div class="sewn-card">
                         <h2>Recent Activity</h2>
-                        <div class="sewn-log-viewer">
-                            <?php foreach ($recent_logs as $log): ?>
-                                <div class="sewn-log-entry">
-                                    <?php echo esc_html($log); ?>
-                                </div>
+                        <div class="activity-list">
+                            <?php foreach ($recent as $activity): ?>
+                            <div class="activity-item <?php echo esc_attr($activity['status']); ?>">
+                                <span class="activity-time"><?php echo esc_html(human_time_diff(strtotime($activity['created_at']))); ?> ago</span>
+                                <span class="activity-url"><?php echo esc_html($activity['url']); ?></span>
+                                <span class="activity-type"><?php echo esc_html($activity['type']); ?></span>
+                                <span class="activity-status"><?php echo esc_html(ucfirst($activity['status'])); ?></span>
+                            </div>
                             <?php endforeach; ?>
                         </div>
                     </div>
@@ -278,6 +320,113 @@ class SEWN_Dashboard {
         <?php
     }
 
+    public function create_screenshots_table() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'sewn_screenshots';
+        
+        // First, check if table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
+        
+        if (!$table_exists) {
+            $charset_collate = $wpdb->get_charset_collate();
+            
+            $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+                id bigint(20) NOT NULL AUTO_INCREMENT,
+                url varchar(2083) NOT NULL,
+                type varchar(50) NOT NULL DEFAULT 'full',
+                status varchar(20) NOT NULL DEFAULT 'pending',
+                processing_time float DEFAULT 0,
+                error_message text DEFAULT NULL,
+                screenshot_path varchar(255) DEFAULT NULL,
+                file_size bigint(20) DEFAULT 0,
+                cached tinyint(1) DEFAULT 0,
+                created_at datetime DEFAULT CURRENT_TIMESTAMP,
+                updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY  (id),
+                KEY url (url(191)),
+                KEY type (type),
+                KEY status (status),
+                KEY created_at (created_at),
+                KEY cached (cached)
+            ) $charset_collate;";
+            
+            require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+            dbDelta($sql);
+            
+            $this->logger->debug('Screenshots table created');
+        }
+        
+        // Check and add missing columns regardless of whether table was just created
+        $columns = $wpdb->get_col("DESCRIBE {$table_name}");
+        
+        $required_columns = [
+            'error_message' => "ADD COLUMN error_message text DEFAULT NULL",
+            'cached' => "ADD COLUMN cached tinyint(1) DEFAULT 0",
+            'processing_time' => "ADD COLUMN processing_time float DEFAULT 0",
+            'file_size' => "ADD COLUMN file_size bigint(20) DEFAULT 0",
+            'screenshot_path' => "ADD COLUMN screenshot_path varchar(255) DEFAULT NULL",
+            'type' => "ADD COLUMN type varchar(50) NOT NULL DEFAULT 'full'",
+            'status' => "ADD COLUMN status varchar(20) NOT NULL DEFAULT 'pending'"
+        ];
+        
+        foreach ($required_columns as $column => $definition) {
+            if (!in_array($column, $columns)) {
+                $wpdb->query("ALTER TABLE {$table_name} {$definition}");
+                $this->logger->debug("Added column {$column} to screenshots table");
+            }
+        }
+        
+        // Verify all columns were added successfully
+        $final_columns = $wpdb->get_col("DESCRIBE {$table_name}");
+        $missing_columns = array_diff(array_keys($required_columns), $final_columns);
+        
+        if (!empty($missing_columns)) {
+            $this->logger->error('Failed to add some columns', [
+                'missing_columns' => $missing_columns
+            ]);
+        } else {
+            $this->logger->debug('All required columns verified');
+        }
+    }
+
+    private function insert_sample_data() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'sewn_screenshots';
+        
+        // Only insert if table is empty
+        $count = $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
+        if ($count == 0) {
+            $sample_data = [
+                [
+                    'url' => 'https://example.com',
+                    'type' => 'full',
+                    'status' => 'success',
+                    'processing_time' => 2.5,
+                    'created_at' => current_time('mysql')
+                ],
+                [
+                    'url' => 'https://example.org',
+                    'type' => 'preview',
+                    'status' => 'success',
+                    'processing_time' => 1.8,
+                    'created_at' => current_time('mysql')
+                ],
+                [
+                    'url' => 'https://test.com',
+                    'type' => 'full',
+                    'status' => 'failed',
+                    'processing_time' => 0,
+                    'error_message' => 'Connection timeout',
+                    'created_at' => current_time('mysql')
+                ]
+            ];
+            
+            foreach ($sample_data as $data) {
+                $wpdb->insert($table_name, $data);
+            }
+        }
+    }
+
     private function get_cache_stats() {
         global $wpdb;
         
@@ -329,11 +478,14 @@ class SEWN_Dashboard {
     }
 
     private function calculate_cache_hit_rate() {
-        $hits = get_option('sewn_cache_hits', 0);
-        $misses = get_option('sewn_cache_misses', 0);
-        $total = $hits + $misses;
-        
-        return $total > 0 ? round(($hits / $total) * 100, 2) : 0;
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'sewn_api_logs';
+        $hits = (int) $wpdb->get_var("SELECT SUM(cache_hits) FROM {$table_name}");
+        $total = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$table_name}");
+        if ($total === 0) {
+            return 0;
+        }
+        return round(($hits / $total) * 100, 2);
     }
 
     private function get_recent_screenshots($limit = 10) {
@@ -368,52 +520,135 @@ class SEWN_Dashboard {
         global $wpdb;
         $table_name = $wpdb->prefix . 'sewn_screenshots';
         
-        // Create table if it doesn't exist
-        $this->create_screenshots_table();
-        
         $stats = [
             'total_screenshots' => 0,
-            'preview_count' => 0,
-            'full_count' => 0,
-            'total_size' => 0,
-            'cache_hits' => 0
+            'cached_screenshots' => 0,
+            'failed_requests' => 0,
+            'success_rate' => 0,
+            'api_usage' => 0
         ];
         
         try {
-            $stats['total_screenshots'] = (int)$wpdb->get_var("SELECT COUNT(*) FROM $table_name");
-            $stats['preview_count'] = (int)$wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE type = 'preview'");
-            $stats['full_count'] = (int)$wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE type = 'full'");
-            $stats['total_size'] = (int)$wpdb->get_var("SELECT SUM(size) FROM $table_name");
-            $stats['cache_hits'] = (int)$wpdb->get_var("SELECT SUM(cache_hits) FROM $table_name");
+            // Get total screenshots
+            $stats['total_screenshots'] = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table_name} WHERE 1=%d", 
+                1
+            ));
+            
+            // Get cached screenshots
+            $stats['cached_screenshots'] = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table_name} WHERE cached = %d",
+                1
+            ));
+            
+            // Get failed requests
+            $stats['failed_requests'] = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table_name} WHERE status = %s",
+                'failed'
+            ));
+            
+            // Calculate success rate
+            if ($stats['total_screenshots'] > 0) {
+                $successful = $stats['total_screenshots'] - $stats['failed_requests'];
+                $stats['success_rate'] = round(($successful / $stats['total_screenshots']) * 100);
+            }
+            
+            // Get current month's API usage
+            $stats['api_usage'] = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table_name} 
+                WHERE MONTH(created_at) = MONTH(%s) 
+                AND YEAR(created_at) = YEAR(%s)",
+                current_time('mysql'),
+                current_time('mysql')
+            ));
+            
         } catch (Exception $e) {
-            $this->logger->error('Failed to get usage statistics', ['error' => $e->getMessage()]);
+            $this->logger->error('Error fetching usage statistics', [
+                'error' => $e->getMessage()
+            ]);
         }
         
         return $stats;
     }
 
-    private function create_screenshots_table() {
+    private function get_cache_hits() {
+        // Wrap the query to avoid errors if 'cache_hits' column is missing
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'sewn_api_logs';
+        $col_exists = $wpdb->get_row("SHOW COLUMNS FROM `{$table_name}` LIKE 'cache_hits'");
+        if (!$col_exists) {
+            return 0;
+        }
+        return (int) $wpdb->get_var("SELECT SUM(cache_hits) FROM `{$table_name}`");
+    }
+
+    private function get_api_key_status() {
+        $api_key = get_option('sewn_api_key', '');
+        $fallback_key = get_option('sewn_fallback_api_key', '');
+        
+        return [
+            'primary_key' => [
+                'exists' => !empty($api_key),
+                'last_used' => get_option('sewn_api_key_last_used', ''),
+                'status' => $this->api_manager->verify_api_key($api_key) ? 'active' : 'inactive'
+            ],
+            'fallback_key' => [
+                'exists' => !empty($fallback_key),
+                'provider' => get_option('sewn_fallback_service', 'none'),
+                'status' => $this->api_manager->verify_fallback_key($fallback_key) ? 'active' : 'inactive'
+            ]
+        ];
+    }
+
+    private function get_screenshot_types() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'sewn_screenshots';
         
-        $charset_collate = $wpdb->get_charset_collate();
+        try {
+            return $wpdb->get_results($wpdb->prepare(
+                "SELECT 
+                    type,
+                    COUNT(*) as count,
+                    SUM(CASE WHEN status = %s THEN 1 ELSE 0 END) as successful,
+                    AVG(CASE WHEN processing_time > 0 THEN processing_time ELSE NULL END) as avg_time
+                FROM {$table_name}
+                WHERE created_at >= DATE_SUB(%s, INTERVAL 30 DAY)
+                GROUP BY type",
+                'success',
+                current_time('mysql')
+            ), ARRAY_A);
+        } catch (Exception $e) {
+            $this->logger->error('Error fetching screenshot types', [
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
+    }
+
+    private function get_recent_activity($limit = 5) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'sewn_screenshots';
         
-        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
-            url varchar(2083) NOT NULL,
-            type varchar(10) NOT NULL,
-            size bigint(20) NOT NULL,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            status varchar(20) NOT NULL,
-            cache_hits int(11) DEFAULT 0,
-            file_path varchar(255) NOT NULL,
-            PRIMARY KEY  (id),
-            KEY url (url(191)),
-            KEY type (type),
-            KEY created_at (created_at)
-        ) $charset_collate;";
-        
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        try {
+            return $wpdb->get_results($wpdb->prepare(
+                "SELECT 
+                    url,
+                    type,
+                    status,
+                    created_at,
+                    processing_time,
+                    error_message,
+                    file_size
+                FROM {$table_name}
+                ORDER BY created_at DESC
+                LIMIT %d",
+                $limit
+            ), ARRAY_A);
+        } catch (Exception $e) {
+            $this->logger->error('Error fetching recent activity', [
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
     }
 }

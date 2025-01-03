@@ -13,6 +13,32 @@ define('SEWN_SCREENSHOTS_PATH', plugin_dir_path(__FILE__));
 define('SEWN_SCREENSHOTS_URL', plugin_dir_url(__FILE__));
 define('SEWN_SCREENSHOTS_VERSION', '1.0');
 
+// Database version constant
+define('SEWN_SCREENSHOTS_DB_VERSION', '1.1');
+
+// Add database update check
+function sewn_check_db_updates() {
+    $current_db_version = get_option('sewn_screenshots_db_version', '1.0');
+    
+    if (version_compare($current_db_version, SEWN_SCREENSHOTS_DB_VERSION, '<')) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'sewn_screenshots';
+        
+        // Check if updated_at column exists
+        $row = $wpdb->get_results("SHOW COLUMNS FROM `{$table_name}` LIKE 'updated_at'");
+        if (empty($row)) {
+            $wpdb->query("ALTER TABLE `{$table_name}` 
+                         ADD COLUMN `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP 
+                         ON UPDATE CURRENT_TIMESTAMP AFTER `created_at`");
+        }
+        
+        update_option('sewn_screenshots_db_version', SEWN_SCREENSHOTS_DB_VERSION);
+    }
+}
+
+// Add the check to initialization
+add_action('init', 'sewn_check_db_updates');
+
 // Load required files
 require_once SEWN_SCREENSHOTS_PATH . 'includes/class-logger.php';
 require_once SEWN_SCREENSHOTS_PATH . 'includes/admin/class-settings.php';
@@ -24,11 +50,14 @@ require_once SEWN_SCREENSHOTS_PATH . 'includes/services/class-cache.php';
 require_once SEWN_SCREENSHOTS_PATH . 'includes/admin/class-api-manager.php';
 require_once SEWN_SCREENSHOTS_PATH . 'includes/services/class-api-logger.php';
 require_once SEWN_SCREENSHOTS_PATH . 'includes/admin/class-api-tester.php';
+require_once SEWN_SCREENSHOTS_PATH . 'includes/class-rate-limiter.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-screenshot-service.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-ajax-handler.php';
 require_once plugin_dir_path(__FILE__) . 'includes/admin/class-admin.php';
 require_once SEWN_SCREENSHOTS_PATH . 'includes/admin/class-menu-manager.php';
 require_once SEWN_SCREENSHOTS_PATH . 'includes/admin/class-test-results.php';
+require_once SEWN_SCREENSHOTS_PATH . 'includes/class-screenshot-service.php';
+require_once SEWN_SCREENSHOTS_PATH . 'includes/class-rest-controller.php';
 
 // Make sure the class is loaded before it's used
 spl_autoload_register(function ($class_name) {
@@ -43,15 +72,46 @@ spl_autoload_register(function ($class_name) {
     }
 });
 
-// Initialize components
+// Initialize core services first
 $logger = new SEWN_Logger();
-$logger->info('Plugin initialized');
-$logger->debug('Test debug message', ['some' => 'context']);
-$logger->error('Test error message', ['error_code' => 123]);
 $screenshot_service = new SEWN_Screenshot_Service($logger);
-$test_results = new SEWN_Test_Results($logger);
-$ajax_handler = new SEWN_Ajax_Handler($screenshot_service, $logger, $test_results);
-$admin = new SEWN_Admin($screenshot_service, $logger);
+$rate_limiter = new SEWN_Rate_Limiter($logger);
+
+// Register REST API routes
+add_action('rest_api_init', function() use ($logger, $screenshot_service, $rate_limiter) {
+    $controller = new SEWN_REST_Controller($screenshot_service, $logger, $rate_limiter);
+    $controller->register_routes();
+    
+    // Add authentication support while preserving existing methods
+    add_filter('rest_authentication_errors', function($result) use ($logger) {
+        // Check for admin users first
+        if (current_user_can('manage_options')) {
+            $logger->debug('Admin user authenticated', [
+                'user_id' => get_current_user_id()
+            ]);
+            return true;
+        }
+        
+        // Existing authentication methods remain unchanged
+        $api_key = isset($_SERVER['HTTP_X_API_KEY']) ? $_SERVER['HTTP_X_API_KEY'] : '';
+        if (!empty($api_key) && $api_key === get_option('sewn_api_key')) {
+            return true;
+        }
+        
+        // Check for logged-in users with specific capability
+        if (current_user_can('access_sewn_network')) {
+            return true;
+        }
+        
+        return $result; // Return existing result if no auth method succeeds
+    });
+});
+
+// Make services available globally if needed
+global $sewn_screenshot_service, $sewn_logger, $sewn_rate_limiter;
+$sewn_logger = $logger;
+$sewn_screenshot_service = $screenshot_service;
+$sewn_rate_limiter = $rate_limiter;
 
 class SEWN_Screenshots {
     private $logger;
@@ -156,44 +216,6 @@ class SEWN_Screenshots {
             SEWN_SCREENSHOTS_VERSION,
             true
         );
-    }
-
-    public function register_endpoints() {
-        register_rest_route('sewn/v1', '/screenshot', [
-            'methods' => 'POST',
-            'callback' => [$this, 'handle_screenshot_request'],
-            'permission_callback' => [$this, 'verify_api_request'],
-            'args' => [
-                'url' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return filter_var($param, FILTER_VALIDATE_URL);
-                    }
-                ],
-                'type' => [
-                    'default' => 'full',
-                    'enum' => ['full', 'preview']
-                ]
-            ]
-        ]);
-
-        register_rest_route('sewn/v1', '/auth/connect', [
-            'methods' => 'GET',
-            'callback' => 'handle_network_auth',
-            'permission_callback' => '__return_true'
-        ]);
-        
-        register_rest_route('sewn/v1', '/auth/exchange', [
-            'methods' => 'POST',
-            'callback' => 'exchange_parent_token',
-            'permission_callback' => '__return_true'
-        ]);
-
-        register_rest_route('sewn/v1', '/preview/screenshot', [
-            'methods' => 'GET',
-            'callback' => [$this, 'get_preview_screenshot'],
-            'permission_callback' => '__return_true'
-        ]);
     }
 
     public function verify_api_request($request) {
@@ -343,9 +365,30 @@ class SEWN_Screenshots {
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
 
+        self::maybe_update_api_logs_table();
+        
         if (!wp_next_scheduled('sewn_screenshots_cleanup')) {
             wp_schedule_event(time(), 'daily', 'sewn_screenshots_cleanup');
         }
+    }
+
+    private static function maybe_update_api_logs_table() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'sewn_api_logs';
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE {$table_name} (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            request_time datetime NOT NULL,
+            url varchar(2083) NOT NULL,
+            status_code int(11) NOT NULL,
+            cache_hits int(11) DEFAULT 0,
+            PRIMARY KEY  (id),
+            KEY url (url(191))
+        ) $charset_collate;";
+
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
     }
 
     public static function get_instance() {
@@ -361,6 +404,66 @@ class SEWN_Screenshots {
 register_activation_hook(__FILE__, ['SEWN_Screenshots', 'activate']);
 register_deactivation_hook(__FILE__, function() {
     SEWN_Screenshots::get_instance()->deactivate();
+});
+
+register_activation_hook(__FILE__, function() {
+    $logger = new SEWN_Logger();
+    $settings = new SEWN_Settings($logger);
+    $api_tester = new SEWN_API_Tester($logger, $settings);
+    $api_manager = new SEWN_API_Manager($logger, $settings);
+    $dashboard = new SEWN_Dashboard($logger, $settings, $api_tester, $api_manager);
+    
+    // Create required tables
+    $dashboard->create_screenshots_table();
+});
+
+// Add this to your deactivation hook handler
+register_deactivation_hook(__FILE__, function() {
+    $logger = new SEWN_Logger();
+    
+    // Only delete tables if explicitly configured
+    if (get_option('sewn_cleanup_on_deactivate', false)) {
+        global $wpdb;
+        
+        // List of tables to clean up
+        $tables = [
+            $wpdb->prefix . 'sewn_screenshots',
+            $wpdb->prefix . 'sewn_logs',
+            $wpdb->prefix . 'sewn_api_logs'
+        ];
+        
+        foreach ($tables as $table) {
+            if ($wpdb->get_var("SHOW TABLES LIKE '$table'") === $table) {
+                $wpdb->query("DROP TABLE IF EXISTS $table");
+                $logger->info("Cleaned up table: $table");
+            }
+        }
+        
+        // Clean up related options
+        $options = [
+            'sewn_api_key',
+            'sewn_settings',
+            'sewn_cleanup_on_deactivate'
+        ];
+        
+        foreach ($options as $option) {
+            delete_option($option);
+            $logger->info("Cleaned up option: $option");
+        }
+        
+        $logger->info('Plugin cleanup completed');
+    } else {
+        $logger->info('Plugin deactivated without cleanup');
+    }
+});
+
+// Add a setting to control cleanup behavior
+add_action('admin_init', function() {
+    register_setting('sewn_screenshots_options', 'sewn_cleanup_on_deactivate', [
+        'type' => 'boolean',
+        'default' => false,
+        'description' => 'Delete all plugin data when deactivating'
+    ]);
 });
 
 SEWN_Screenshots::get_instance();

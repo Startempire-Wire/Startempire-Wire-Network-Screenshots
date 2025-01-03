@@ -102,7 +102,7 @@ class SEWN_API_Manager {
         }
     }
 
-    private function get_recent_requests($limit = 50) {
+    public function get_recent_requests($limit = 10) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'sewn_api_logs';
         
@@ -468,5 +468,35 @@ class SEWN_API_Manager {
                 'message' => $e->getMessage()
             ]);
         }
+    }
+
+    public function get_current_service() {
+        return get_option('sewn_fallback_service', 'none');
+    }
+
+    public function get_current_api_key() {
+        return get_option('sewn_fallback_api_key', '');
+    }
+
+    public function get_available_fallback_services() {
+        return $this->fallback_services;
+    }
+
+    public function verify_api_key($key) {
+        if (empty($key)) {
+            return false;
+        }
+        
+        $stored_key = get_option('sewn_api_key', '');
+        return !empty($stored_key) && $key === $stored_key;
+    }
+
+    public function verify_fallback_key($key) {
+        if (empty($key)) {
+            return false;
+        }
+        
+        $stored_key = get_option('sewn_fallback_api_key', '');
+        return !empty($stored_key) && $key === $stored_key;
     }
 } 

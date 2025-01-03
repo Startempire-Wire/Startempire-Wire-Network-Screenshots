@@ -14,6 +14,20 @@ class SEWN_Screenshot_Service {
     private $default_options;
     private $wkhtmltoimage_path;
     private $screenshot_dir;
+    
+    // Add fallback service configuration
+    private $fallback_services = [
+        'screenshotmachine' => [
+            'url' => 'https://api.screenshotmachine.com/',
+            'params' => [
+                'key' => '',
+                'url' => '',
+                'dimension' => '1280x720',
+                'format' => 'jpg',
+                'cacheLimit' => '14400'
+            ]
+        ]
+    ];
 
     public function __construct($logger = null) {
         $this->logger = $logger;
@@ -55,51 +69,60 @@ class SEWN_Screenshot_Service {
     }
 
     public function take_screenshot($url, $options = []) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'sewn_screenshots';
+        $start_time = microtime(true);
+        
         try {
-            $options = $this->validate_options($options);
+            // Log the initial attempt
+            $wpdb->insert($table_name, [
+                'url' => $url,
+                'type' => $options['type'] ?? 'full',
+                'status' => 'pending',
+                'created_at' => current_time('mysql')
+            ]);
+            $screenshot_id = $wpdb->insert_id;
             
-            if ($this->logger) {
-                $this->logger->info('Taking screenshot', [
-                    'url' => $url,
-                    'options' => $options,
-                    'using_wkhtmltoimage' => (bool)$this->wkhtmltoimage_path
-                ]);
-            }
-
+            $options = $this->validate_options($options);
             $output_file = $this->generate_file_path($url);
-
+            
             if ($this->wkhtmltoimage_path) {
                 $result = $this->take_screenshot_with_wkhtmltoimage($url, $output_file, $options);
             } else {
                 $result = $this->take_screenshot_with_fallback($url, $output_file, $options);
             }
-
-            // Verify the file exists and is readable
-            if (!file_exists($output_file) || !is_readable($output_file)) {
-                throw new Exception('Screenshot file not created or not readable');
-            }
-
-            $result['file_path'] = $output_file;
-            $result['url'] = str_replace(
-                wp_get_upload_dir()['basedir'],
-                wp_get_upload_dir()['baseurl'],
-                $output_file
-            );
-            $result['size'] = filesize($output_file);
             
-            if ($this->logger) {
-                $this->logger->info('Screenshot taken successfully', $result);
-            }
-
+            // Update the record with success info
+            $processing_time = microtime(true) - $start_time;
+            $wpdb->update(
+                $table_name,
+                [
+                    'status' => 'success',
+                    'processing_time' => $processing_time,
+                    'screenshot_path' => $output_file,
+                    'file_size' => filesize($output_file),
+                    'updated_at' => current_time('mysql')
+                ],
+                ['id' => $screenshot_id]
+            );
+            
             return $result;
-
+            
         } catch (Exception $e) {
-            if ($this->logger) {
-                $this->logger->error('Screenshot failed: ' . $e->getMessage(), [
-                    'url' => $url,
-                    'options' => $options
-                ]);
+            // Log the failure
+            if (isset($screenshot_id)) {
+                $wpdb->update(
+                    $table_name,
+                    [
+                        'status' => 'failed',
+                        'error_message' => $e->getMessage(),
+                        'processing_time' => microtime(true) - $start_time,
+                        'updated_at' => current_time('mysql')
+                    ],
+                    ['id' => $screenshot_id]
+                );
             }
+            
             throw $e;
         }
     }
@@ -137,18 +160,23 @@ class SEWN_Screenshot_Service {
             throw new Exception('Fallback service API key not configured');
         }
 
-        // Example for Screenshot Machine API
-        $api_url = 'https://api.screenshotmachine.com/';
-        $params = [
-            'key' => $api_key,
-            'url' => urlencode($url),
-            'dimension' => $options['width'] . 'x' . $options['height'],
-            'format' => 'png',
-            'cacheLimit' => '0',
-            'delay' => '2000'
-        ];
+        // Configure service parameters
+        $params = $this->fallback_services[$service]['params'];
+        $params['key'] = $api_key;
+        $params['url'] = urlencode($url);
+        $params['dimension'] = $options['width'] . 'x' . $options['height'];
 
-        $response = wp_remote_get(add_query_arg($params, $api_url), [
+        // Debug API request
+        if ($this->logger) {
+            $this->logger->debug('Making fallback service request', [
+                'service' => $service,
+                'url' => $url,
+                'has_key' => !empty($api_key)
+            ]);
+        }
+
+        // Make API request
+        $response = wp_remote_get(add_query_arg($params, $this->fallback_services[$service]['url']), [
             'timeout' => 30
         ]);
 
@@ -161,14 +189,6 @@ class SEWN_Screenshot_Service {
             throw new Exception('No image data received from fallback service');
         }
 
-        // Check if the response is an error message instead of image data
-        if (strlen($image_data) < 1024) { // Likely an error message if too small
-            $possible_error = json_decode($image_data, true);
-            if ($possible_error && isset($possible_error['error'])) {
-                throw new Exception('Fallback service error: ' . $possible_error['error']);
-            }
-        }
-
         if (!file_put_contents($output_file, $image_data)) {
             throw new Exception('Failed to save screenshot file');
         }
@@ -177,6 +197,8 @@ class SEWN_Screenshot_Service {
             'success' => true,
             'method' => 'fallback_service',
             'service' => $service,
+            'path' => $output_file,
+            'url' => str_replace($this->screenshot_dir, wp_upload_dir()['baseurl'] . '/screenshots/', $output_file),
             'timestamp' => current_time('mysql')
         ];
     }
@@ -206,5 +228,10 @@ class SEWN_Screenshot_Service {
         $options['javascript-delay'] = max(0, min(30000, intval($options['javascript-delay'])));
         
         return $options;
+    }
+
+    public function is_local_enabled() {
+        $path = get_option('sewn_wkhtmltopdf_path', '');
+        return !empty($path) && file_exists($path);
     }
 } 

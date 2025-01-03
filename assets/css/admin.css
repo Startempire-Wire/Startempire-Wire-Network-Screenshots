@@ -47,7 +47,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 20px;
-    margin: 20px 0;
+    padding: 20px 0;
 }
 
 .sewn-settings-grid {
@@ -439,4 +439,167 @@
 
 .screenshot-preview img {
     width: 100%;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+    color: #1e1e1e;
+}
+
+.stat-label {
+    display: block;
+    font-size: 13px;
+    color: #646970;
+}
+
+/* API Status */
+.api-status {
+    display: grid;
+    gap: 10px;
+}
+
+.key-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ccc;
+}
+
+.key-status.active .status-dot {
+    background: #00a32a;
+}
+
+.key-status.inactive .status-dot {
+    background: #cc1818;
+}
+
+/* Types Grid */
+.types-grid {
+    display: grid;
+    gap: 15px;
+}
+
+.type-item {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+}
+
+.type-item h3 {
+    margin: 0 0 10px 0;
+}
+
+.type-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    font-size: 13px;
+}
+
+/* Activity List */
+.activity-list {
+    display: grid;
+    gap: 10px;
+}
+
+.activity-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 10px;
+    align-items: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.activity-item.success {
+    border-left: 3px solid #00a32a;
+}
+
+.activity-item.failed {
+    border-left: 3px solid #cc1818;
+}
+
+.activity-time {
+    color: #646970;
+}
+
+.activity-status {
+    font-weight: 500;
+}
+
+.activity-status.success {
+    color: #00a32a;
+}
+
+.activity-status.failed {
+    color: #cc1818;
+}
+
+/* API Tester Results */
+.sewn-api-test-results {
+    margin-top: 20px;
+}
+
+.test-success {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 4px;
+}
+
+.result-details {
+    margin: 20px 0;
+}
+
+.result-details dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+}
+
+.result-details dt {
+    font-weight: 600;
+}
+
+.screenshot-preview {
+    margin-top: 20px;
+}
+
+.screenshot-preview img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ddd;
+}
+
+.spinner {
+    float: none;
+    margin: 0 10px;
+}
+
+.spinner.is-active {
+    visibility: visible;
 }
