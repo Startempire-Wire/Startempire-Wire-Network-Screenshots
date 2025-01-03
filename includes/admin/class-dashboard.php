@@ -600,23 +600,32 @@ class SEWN_Dashboard {
         ];
     }
 
-    private function get_screenshot_types() {
+    public function get_screenshot_types() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'sewn_screenshots';
-        
+
         try {
-            return $wpdb->get_results($wpdb->prepare(
+            $results = $wpdb->get_results($wpdb->prepare(
                 "SELECT 
                     type,
                     COUNT(*) as count,
                     SUM(CASE WHEN status = %s THEN 1 ELSE 0 END) as successful,
                     AVG(CASE WHEN processing_time > 0 THEN processing_time ELSE NULL END) as avg_time
-                FROM {$table_name}
-                WHERE created_at >= DATE_SUB(%s, INTERVAL 30 DAY)
-                GROUP BY type",
+                 FROM {$table_name}
+                 WHERE created_at >= DATE_SUB(%s, INTERVAL 30 DAY)
+                 GROUP BY type",
                 'success',
                 current_time('mysql')
             ), ARRAY_A);
+
+            // Add success_rate to each row
+            foreach ($results as &$row) {
+                $count = (int) $row['count'];
+                $successful = (int) $row['successful'];
+                $row['success_rate'] = $count > 0 ? round(($successful / $count) * 100, 2) : 0;
+            }
+
+            return $results;
         } catch (Exception $e) {
             $this->logger->error('Error fetching screenshot types', [
                 'error' => $e->getMessage()
