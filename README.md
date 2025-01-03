@@ -56,30 +56,78 @@ After activation, a new menu and submenus appear in WordPress Admin. The main pl
 
 ## 4. Usage and Available REST APIs
 
-The plugin exposes REST API routes under “/wp-json/sewn-screenshots/v1/”. Below are the main endpoints:
+The plugin exposes REST API routes under “/wp-json/sewn-screenshots/v1/”. Below are the primary endpoints, along with brief notes about authentication and rate limiting:
 
 1. **POST /wp-json/sewn-screenshots/v1/screenshot**  
+   • Purpose: Creates a new screenshot of the specified URL.  
    • Parameters:  
-     - “url”: The website URL to capture.  
-     - “type”: (optional) The screenshot type, e.g., “full”, “thumbnail”, or any custom setting the plugin supports.  
+     - “url” (required): The URL to capture.  
+     - “type” (optional): Screenshot type, e.g., "full" or "preview". Defaults to "full".  
+     - “options” (optional): An object containing “width”, “height”, “quality”, etc.  
    • Headers:  
-     - “X-API-Key”: If required by your configuration, supply your plugin’s API key or membership token.  
+     - “X-API-Key” (or JWT / OAuth2 alternatives). Authentication is required.  
+   • Rate Limited: Yes (free tier: 60/hour, premium tier: 300/hour).  
+   • Cache Enabled: Yes (screenshot results are cached for performance).  
    • Response:  
-     - On success: { “success”: true, “screenshot_url”: “https://example.com/.../image.png”, “message”: “Screenshot captured” }  
-     - On error: { “success”: false, “message”: “Error details” }  
+     - On success: { "success": true, "screenshot_url": "…", "message": "Screenshot captured", … }  
+     - On error: { "success": false, "message": "Error details" }
 
-2. **GET /wp-json/sewn-screenshots/v1/status**  
-   • Purpose: Provides plugin environment status (local binary detection, fallback presence, caching details, membership levels if relevant).  
-   • Response: { “wkhtmltoimage_found”: bool, “fallback_available”: bool, “cache_size”: number, ... }  
+2. **GET /wp-json/sewn-screenshots/v1/preview/screenshot**  
+   • Purpose: Retrieves an optimized preview screenshot for a given URL.  
+   • Parameters:  
+     - “url” (required): The URL to capture.  
+     - “options” (optional): Width, height, quality, and format (png, jpg, webp).  
+   • Auth Required: No.  
+   • Rate Limited: No.  
+   • Cache Enabled: Yes (24h by default).  
+   • Response:  
+     - On success: Standard screenshot data, similar to the “/screenshot” endpoint.  
+     - On error: { "success": false, "message": "Error details" }
 
-3. **POST /wp-json/sewn-screenshots/v1/cache/purge**  
+3. **GET /wp-json/sewn-screenshots/v1/status**  
+   • Purpose: Provides plugin environment status, including local binary detection, fallback availability, cache stats, and rate limit usage.  
+   • Auth Required: Yes (“X-API-Key” or equivalent).  
+   • Rate Limited: Yes (free tier: 60/hour, premium tier: 300/hour).  
+   • Response Example:  
+     {  
+       "wkhtmltoimage_found": bool,  
+       "fallback_available": bool,  
+       "cache_size": number,  
+       "rate_limits": {...},  
+       …  
+     }
+
+4. **POST /wp-json/sewn-screenshots/v1/cache/purge**  
    • Purpose: Clears out or selectively purges locally cached screenshots.  
+   • Auth Required: Administrator privileges only.  
+   • Rate Limited: No.  
    • Headers:  
-     - “X-API-Key”: Required for administrative or advanced membership role to ensure only authorized usage.  
-   • Response: { “success”: true, “message”: “Cache purged” } or { “success”: false, “message”: “Error details” }  
+     - “X-API-Key” (Admin key or user with manage_options capability).  
+   • Response:  
+     - On success: { "success": true, "message": "Cache purged", "statistics": {...} }  
+     - On error: { "success": false, "message": "Error details" }
 
-4. **Optional: Additional Routes**  
-   • If you enable fallback or premium membership logic, additional routes are available for regenerating membership tokens, retrieving logs, or handling large batch screenshot requests.
+5. **GET /wp-json/sewn-screenshots/v1/auth/connect**  
+   • Purpose: Initiates network authentication (OAuth2) with a secure PKCE flow.  
+   • Auth Required: No.  
+   • Rate Limited: No.  
+   • Response:  
+     - On success: { "success": true, "auth_url": "…", "state": "…", "code_challenge": "…" }  
+     - On error: Standard error response.
+
+6. **POST /wp-json/sewn-screenshots/v1/auth/exchange**  
+   • Purpose: Exchanges a temporary token for an API key (completes OAuth2 flow).  
+   • Auth Required: No.  
+   • Rate Limited: No.  
+   • Parameters:  
+     - “token”: Temporary token from OAuth2 provider.  
+     - “state”: Used to validate the in-progress authentication.  
+   • Response:  
+     - On success: { "success": true, "message": "Token exchanged successfully", … }  
+     - On error: Standard error response.
+
+7. **Optional: Additional Routes**  
+   If you enable fallback logic, premium membership checks, or other advanced features, the plugin can provide extra routes for regenerating tokens, retrieving logs, handling large batch screenshot requests, or further integration with membership tiers. Refer to the admin dashboard and code documentation for details on enabling these routes.
 
 ---
 
