@@ -54,149 +54,89 @@ class SEWN_Dashboard {
 
     public function render_dashboard() {
         try {
-            $this->logger->debug('Starting dashboard render');
-            
-            if (!$this->settings) {
-                throw new Exception('Settings dependency not initialized');
-            }
-            
-            $all_settings = $this->settings->get_all_settings();
-            $storage_stats = $this->get_storage_stats();
-            $cache_stats = $this->get_cache_stats();
-            $recent_logs = $this->logger->get_recent_logs(10);
-            $recent_screenshots = $this->get_recent_screenshots();
-            $usage_stats = $this->get_usage_statistics();
-
-            $this->logger->debug('Dashboard data retrieved', [
-                'storage_stats' => $storage_stats,
-                'cache_stats' => $cache_stats,
-                'recent_screenshots_count' => count($recent_screenshots),
-                'usage_stats' => $usage_stats
-            ]);
-
-            // Fetch existing stats
-            $cache_stats = $this->get_cache_stats(); // already calls calculate_cache_hit_rate()
-            $storage_stats = $this->get_storage_stats(); // for total files, size, etc.
-
-            // Gather API key info
-            $current_service = $this->api_manager ? $this->api_manager->get_current_service() : '';
-            $current_api_key = $this->api_manager ? $this->api_manager->get_current_api_key() : '';
-
-            // Determine screenshot types (local plus any fallback)
-            $available_types = [];
-            if ($this->screenshot_service && $this->screenshot_service->is_local_enabled()) {
-                $available_types[] = 'Local (wkhtmltoimage)';
-            }
-            if ($this->api_manager) {
-                foreach ($this->api_manager->get_available_fallback_services() as $slug => $service) {
-                    if (!$service['requires_key'] || get_option('sewn_fallback_api_key', '')) {
-                        $available_types[] = $service['name'] . ' (' . $slug . ')';
-                    }
-                }
-            }
-
-            // Fetch recent activity
-            $recent_requests = [];
-            if ($this->api_manager && method_exists($this->api_manager, 'get_recent_requests')) {
-                $recent_requests = $this->api_manager->get_recent_requests(5);
-            }
-
             $stats = $this->get_usage_statistics();
             $api_status = $this->get_api_key_status();
-            $types = $this->get_screenshot_types();
-            $recent = $this->get_recent_activity();
-
+            $health_status = $this->get_system_health_status();
+            $security_config = $this->api_manager->get_security_configuration();
+            
             ?>
-            <div class="wrap">
-                <h1>Screenshot Service Dashboard</h1>
-
+            <div class="wrap sewn-dashboard-wrapper">
+                <h1><?php _e('Screenshot Service Dashboard', 'startempire-wire-network-screenshots'); ?></h1>
+                
+                <!-- Status Overview -->
                 <div class="sewn-dashboard-grid">
-                    <!-- Quick Stats -->
-                    <?php $this->logger->debug('Rendering quick stats section'); ?>
                     <div class="sewn-card">
-                        <h2>Quick Statistics</h2>
-                        <div class="stats-grid">
+                        <h2><span class="dashicons dashicons-heart"></span> <?php _e('System Health', 'startempire-wire-network-screenshots'); ?></h2>
+                        <div class="sewn-stats-grid">
+                            <?php foreach ($health_status['checks'] as $check): ?>
                             <div class="stat-item">
-                                <span class="stat-value"><?php echo esc_html($stats['total_screenshots']); ?></span>
-                                <span class="stat-label">Total Screenshots</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value"><?php echo esc_html($stats['success_rate']); ?>%</span>
-                                <span class="stat-label">Success Rate</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value"><?php echo esc_html($stats['api_usage']); ?></span>
-                                <span class="stat-label">API Calls This Month</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- API Key Status -->
-                    <?php $this->logger->debug('Rendering API key section'); ?>
-                    <div class="sewn-card">
-                        <h2>API Key Status</h2>
-                        <div class="api-status">
-                            <div class="key-status <?php echo esc_attr($api_status['primary_key']['status']); ?>">
-                                <span class="status-dot"></span>
-                                <span>Primary API Key: <?php echo $api_status['primary_key']['exists'] ? 'Active' : 'Not Set'; ?></span>
-                            </div>
-                            <div class="key-status <?php echo esc_attr($api_status['fallback_key']['status']); ?>">
-                                <span class="status-dot"></span>
-                                <span>Fallback Key (<?php echo esc_html($api_status['fallback_key']['provider']); ?>): 
-                                      <?php echo $api_status['fallback_key']['exists'] ? 'Active' : 'Not Set'; ?></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Screenshot Types -->
-                    <?php $this->logger->debug('Rendering screenshot types section', ['stats' => $usage_stats]); ?>
-                    <div class="sewn-card">
-                        <h2>Screenshot Types</h2>
-                        <div class="types-grid">
-                            <?php foreach ($types as $type): ?>
-                            <div class="type-item">
-                                <h3><?php echo esc_html(ucfirst($type['type'])); ?></h3>
-                                <div class="type-stats">
-                                    <span>Count: <?php echo esc_html($type['count']); ?></span>
-                                    <span>Success: <?php echo esc_html($type['success_rate']); ?>%</span>
-                                    <span>Avg Time: <?php echo esc_html($type['avg_time']); ?>s</span>
-                                </div>
+                                <span class="sewn-status-badge <?php echo $check['status']; ?>">
+                                    <?php echo esc_html($check['label']); ?>
+                                </span>
                             </div>
                             <?php endforeach; ?>
                         </div>
                     </div>
 
-                    <!-- Recent Activity -->
-                    <?php $this->logger->debug('Rendering recent activity section', ['log_count' => count($recent_logs)]); ?>
                     <div class="sewn-card">
-                        <h2>Recent Activity</h2>
-                        <div class="activity-list">
-                            <?php foreach ($recent as $activity): ?>
-                            <div class="activity-item <?php echo esc_attr($activity['status']); ?>">
-                                <span class="activity-time"><?php echo esc_html(human_time_diff(strtotime($activity['created_at']))); ?> ago</span>
-                                <span class="activity-url"><?php echo esc_html($activity['url']); ?></span>
-                                <span class="activity-type"><?php echo esc_html($activity['type']); ?></span>
-                                <span class="activity-status"><?php echo esc_html(ucfirst($activity['status'])); ?></span>
+                        <h2><span class="dashicons dashicons-shield"></span> <?php _e('Security Overview', 'startempire-wire-network-screenshots'); ?></h2>
+                        <div class="sewn-stats-grid">
+                            <?php foreach ($security_config as $item): ?>
+                            <div class="stat-item">
+                                <span class="sewn-status-badge <?php echo $item['status']; ?>">
+                                    <?php echo esc_html($item['label']); ?>
+                                </span>
                             </div>
                             <?php endforeach; ?>
                         </div>
                     </div>
-
-                    <!-- Recent Screenshots -->
-                    <?php $this->logger->debug('Rendering recent screenshots section'); ?>
-                    <?php $this->render_screenshots_carousel(); ?>
                 </div>
+
+                <!-- Installation Status Table -->
+                <div class="sewn-card">
+                    <h2><span class="dashicons dashicons-admin-tools"></span> <?php _e('Installation Status', 'startempire-wire-network-screenshots'); ?></h2>
+                    <div class="sewn-installation-table-wrapper">
+                        <table class="wp-list-table widefat fixed striped">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Component', 'startempire-wire-network-screenshots'); ?></th>
+                                    <th><?php _e('Status', 'startempire-wire-network-screenshots'); ?></th>
+                                    <th><?php _e('Version', 'startempire-wire-network-screenshots'); ?></th>
+                                    <th><?php _e('Action', 'startempire-wire-network-screenshots'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($this->get_installation_status() as $component): ?>
+                                <tr>
+                                    <td><?php echo esc_html($component['name']); ?></td>
+                                    <td>
+                                        <span class="sewn-status-badge <?php echo $component['status']; ?>">
+                                            <?php echo esc_html($component['status_label']); ?>
+                                        </span>
+                                    </td>
+                                    <td><?php echo esc_html($component['version']); ?></td>
+                                    <td>
+                                        <?php if ($component['action']): ?>
+                                        <button class="button button-secondary sewn-component-action"
+                                                data-component="<?php echo esc_attr($component['id']); ?>">
+                                            <?php echo esc_html($component['action_label']); ?>
+                                        </button>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Existing cards and content -->
+                <?php $this->render_existing_dashboard_content(); ?>
             </div>
             <?php
-            $this->logger->debug('Dashboard render completed successfully');
         } catch (Exception $e) {
-            $this->logger->error('Dashboard render failed', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            echo '<div class="notice notice-error"><p>Error loading dashboard: ' . 
-                 esc_html($e->getMessage()) . '</p></div>';
+            $this->logger->error('Error rendering dashboard', ['error' => $e->getMessage()]);
+            wp_die($e->getMessage());
         }
     }
 

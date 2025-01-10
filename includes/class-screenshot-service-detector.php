@@ -2,272 +2,176 @@
 if (!defined('ABSPATH')) exit;
 
 class SEWN_Screenshot_Service_Detector {
+    /** @var SEWN_Logger */
     private $logger;
-    private $cache_key = 'sewn_screenshot_services_status';
-    private $cache_duration = 300; // 5 minutes
-    
-    private $server_side_tools = [
-        'wkhtmltoimage' => [
-            'name' => 'wkhtmltoimage',
-            'type' => 'primary',
-            'paths' => [
-                '/usr/local/bin/wkhtmltoimage',
-                '/usr/bin/wkhtmltoimage',
-                '/opt/local/bin/wkhtmltoimage',
-                '/opt/bin/wkhtmltoimage',
-                'C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltoimage.exe',
-                'C:\\Program Files (x86)\\wkhtmltopdf\\bin\\wkhtmltoimage.exe'
-            ],
-            'command' => 'wkhtmltoimage --version',
-            'required' => true
-        ],
-        'puppeteer' => [
-            'name' => 'Puppeteer',
-            'type' => 'alternative',
-            'command' => 'node -v && npm list puppeteer',
-            'required' => false
-        ],
-        'chrome' => [
-            'name' => 'Google Chrome/Chromium',
-            'type' => 'alternative',
-            'command' => ['google-chrome --version', 'chromium --version'],
-            'required' => false
-        ],
-        'imagemagick' => [
-            'name' => 'ImageMagick',
-            'type' => 'alternative',
-            'command' => 'convert -version',
-            'required' => false
-        ],
-        'gd' => [
-            'name' => 'GD Library',
-            'type' => 'alternative',
-            'check_function' => 'extension_loaded',
-            'required' => false
-        ],
-        'phantomjs' => [
-            'name' => 'PhantomJS',
-            'type' => 'alternative',
-            'command' => 'phantomjs --version',
-            'required' => false
-        ],
-        'browsershot' => [
-            'name' => 'Browsershot',
-            'type' => 'alternative',
-            'composer_package' => 'spatie/browsershot',
-            'required' => false
-        ]
-    ];
 
-    public function __construct($logger) {
+    /** @var array */
+    private $available_services = [];
+
+    /**
+     * Constructor
+     * 
+     * @param SEWN_Logger $logger
+     */
+    public function __construct(SEWN_Logger $logger) {
         $this->logger = $logger;
+        $this->detect_services();
     }
 
-    public function detect_services($force_check = false) {
-        try {
-            if (!$force_check) {
-                $cached = get_transient($this->cache_key);
-                if ($cached !== false) {
-                    return $cached;
-                }
-            }
+    /**
+     * Get available screenshot services
+     * 
+     * @return array
+     */
+    public function get_available_services() {
+        return [
+            'wkhtmltoimage' => [
+                'name' => 'wkhtmltoimage',
+                'available' => $this->check_wkhtmltoimage(),
+                'version' => $this->get_wkhtmltoimage_version()
+            ],
+            'chrome-php' => [
+                'name' => 'Chrome PHP',
+                'available' => $this->check_chrome_php(),
+                'version' => $this->get_chrome_version()
+            ],
+            'screenshot-machine' => [
+                'name' => 'Screenshot Machine',
+                'available' => $this->check_screenshot_machine(),
+                'version' => 'API'
+            ]
+        ];
+    }
 
-            $results = [
-                'timestamp' => time(),
-                'services' => [],
-                'installation_status' => $this->get_installation_status(),
-                'quota_info' => $this->get_quota_info()
-            ];
+    /**
+     * Check if wkhtmltoimage is available
+     * 
+     * @return bool
+     */
+    private function check_wkhtmltoimage() {
+        exec('which wkhtmltoimage', $output, $return_var);
+        $available = $return_var === 0;
+        
+        $this->logger->debug('Checked wkhtmltoimage availability', [
+            'available' => $available,
+            'path' => $output[0] ?? null
+        ]);
+        
+        return $available;
+    }
 
-            foreach ($this->server_side_tools as $id => $tool) {
-                if (get_option("sewn_installing_{$id}")) {
-                    $results['services'][$id] = [
-                        'available' => false,
-                        'status' => 'installing'
-                    ];
-                    continue;
-                }
+    /**
+     * Get wkhtmltoimage version
+     * 
+     * @return string|null
+     */
+    private function get_wkhtmltoimage_version() {
+        exec('wkhtmltoimage --version', $output, $return_var);
+        return $return_var === 0 ? trim($output[0]) : null;
+    }
 
-                $status = $this->check_service($tool);
-                $results['services'][$id] = $status;
-            }
+    /**
+     * Check if Chrome PHP is available
+     * 
+     * @return bool
+     */
+    private function check_chrome_php() {
+        // Check for Chrome PHP package
+        $chrome_php_available = class_exists('HeadlessChromium\Browser');
+        
+        // Check for Chrome binary
+        exec('which google-chrome', $output, $return_var);
+        $chrome_binary_available = $return_var === 0;
+        
+        $this->logger->debug('Checked Chrome PHP availability', [
+            'package_available' => $chrome_php_available,
+            'binary_available' => $chrome_binary_available,
+            'binary_path' => $output[0] ?? null
+        ]);
+        
+        return $chrome_php_available && $chrome_binary_available;
+    }
 
-            set_transient($this->cache_key, $results, $this->cache_duration);
-            return $results;
-
-        } catch (Exception $e) {
-            $this->logger->error('Service detection failed', [
-                'error' => $e->getMessage()
-            ]);
+    /**
+     * Get Chrome version
+     * 
+     * @return string|null
+     */
+    private function get_chrome_version() {
+        if (!$this->check_chrome_php()) {
             return null;
         }
+
+        exec('google-chrome --version', $output, $return_var);
+        $version = $return_var === 0 ? trim($output[0]) : null;
+
+        $this->logger->debug('Retrieved Chrome version', [
+            'version' => $version,
+            'return_var' => $return_var
+        ]);
+
+        return $version;
     }
 
-    private function check_service($tool) {
-        $result = [
-            'name' => $tool['name'],
-            'type' => $tool['type'],
-            'available' => false,
-            'version' => null,
-            'path' => null,
-            'error' => null
-        ];
-
-        try {
-            // Check for specific paths if defined
-            if (isset($tool['paths'])) {
-                foreach ($tool['paths'] as $path) {
-                    if (file_exists($path) && is_executable($path)) {
-                        $result['available'] = true;
-                        $result['path'] = $path;
-                        $version = $this->get_version($path);
-                        if ($version) {
-                            $result['version'] = $version;
-                        }
-                        break;
-                    }
-                }
-            }
-
-            // If no path found or no paths specified, try command
-            if (!$result['available'] && isset($tool['command'])) {
-                $commands = is_array($tool['command']) ? $tool['command'] : [$tool['command']];
-                
-                foreach ($commands as $command) {
-                    $output = [];
-                    $return_var = null;
-                    
-                    if (function_exists('exec') && !in_array('exec', explode(',', ini_get('disable_functions')))) {
-                        @exec($command . ' 2>&1', $output, $return_var);
-                        
-                        if ($return_var === 0) {
-                            $result['available'] = true;
-                            if (!empty($output[0])) {
-                                $result['version'] = trim($output[0]);
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-
-        } catch (Exception $e) {
-            $result['error'] = $e->getMessage();
-            $this->logger->error('Service detection failed', [
-                'service' => $tool['name'],
-                'error' => $e->getMessage()
-            ]);
-        }
-
-        return $result;
-    }
-
-    private function get_version($path) {
-        try {
-            $output = [];
-            $return_var = null;
-            @exec(escapeshellcmd($path) . ' --version 2>&1', $output, $return_var);
-            
-            if ($return_var === 0 && !empty($output[0])) {
-                return trim($output[0]);
-            }
-        } catch (Exception $e) {
-            $this->logger->error('Version detection failed', [
-                'path' => $path,
-                'error' => $e->getMessage()
-            ]);
-        }
-        return null;
-    }
-
-    public function get_primary_service() {
-        $services = $this->detect_services();
+    /**
+     * Check if Screenshot Machine is available
+     * 
+     * @return bool
+     */
+    private function check_screenshot_machine() {
+        $api_key = get_option('sewn_screenshot_machine_key');
+        $is_configured = !empty($api_key);
         
-        foreach ($services['services'] as $id => $service) {
-            if ($service['type'] === 'primary' && $service['available']) {
-                return [
-                    'id' => $id,
-                    'details' => $service
-                ];
-            }
-        }
+        $this->logger->debug('Checked Screenshot Machine availability', [
+            'is_configured' => $is_configured,
+            'has_api_key' => !empty($api_key)
+        ]);
         
-        return null;
+        return $is_configured;
     }
 
-    public function get_available_alternatives() {
-        $services = $this->detect_services();
-        $alternatives = [];
+    /**
+     * Test Screenshot Machine API connection
+     * 
+     * @return bool
+     */
+    private function test_screenshot_machine_connection() {
+        $api_key = get_option('sewn_screenshot_machine_key');
         
-        foreach ($services['services'] as $id => $service) {
-            if ($service['type'] === 'alternative' && $service['available']) {
-                $alternatives[$id] = $service;
-            }
-        }
-        
-        return $alternatives;
-    }
-
-    public function clear_cache() {
-        delete_transient($this->cache_key);
-    }
-
-    private function check_composer_package($package) {
-        $composer_file = ABSPATH . 'vendor/composer/installed.json';
-        if (!file_exists($composer_file)) {
+        if (empty($api_key)) {
+            $this->logger->debug('Screenshot Machine API test failed - No API key');
             return false;
         }
-        
-        $installed = json_decode(file_get_contents($composer_file), true);
-        $packages = $installed['packages'] ?? $installed;
-        
-        foreach ($packages as $installed_package) {
-            if ($installed_package['name'] === $package) {
-                return [
-                    'version' => $installed_package['version'],
-                    'path' => ABSPATH . 'vendor/' . $package
-                ];
-            }
-        }
-        
-        return false;
-    }
 
-    public function enqueue_detection_script() {
-        wp_enqueue_script(
-            'sewn-tool-detector',
-            SEWN_SCREENSHOTS_URL . 'assets/js/tool-detector.js',
-            [],
-            SEWN_SCREENSHOTS_VERSION,
-            true
-        );
+        // Simple test URL
+        $test_url = 'https://api.screenshotmachine.com/?key=' . urlencode($api_key) . '&url=https://example.com&dimension=1024x768';
         
-        wp_localize_script('sewn-tool-detector', 'sewnDetector', [
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('sewn_detect_tools')
+        $response = wp_remote_get($test_url);
+        $is_valid = !is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200;
+        
+        $this->logger->debug('Screenshot Machine API test', [
+            'success' => $is_valid,
+            'response_code' => wp_remote_retrieve_response_code($response)
         ]);
-    }
-
-    private function get_installation_status() {
-        global $wpdb;
-        $options = $wpdb->get_results(
-            "SELECT option_name FROM {$wpdb->options} 
-             WHERE option_name LIKE 'sewn_installing_%'"
-        );
         
-        $status = [];
-        foreach ($options as $option) {
-            $tool = str_replace('sewn_installing_', '', $option->option_name);
-            $status[$tool] = 'installing';
-        }
-        return $status;
+        return $is_valid;
     }
 
-    private function get_quota_info() {
-        $quota_checker = new SEWN_API_Quota_Checker($this->logger);
-        return [
-            'screenshotmachine' => $quota_checker->check_screenshotmachine_quota(),
-            'url2png' => $quota_checker->check_url2png_quota()
-        ];
+    /**
+     * Detect available services
+     * 
+     * @param bool $force Force new detection
+     * @return array
+     */
+    public function detect_services($force = false) {
+        if ($force || empty($this->available_services)) {
+            $this->available_services = $this->get_available_services();
+            
+            $this->logger->info('Screenshot services detected', [
+                'services' => $this->available_services
+            ]);
+        }
+        
+        return $this->available_services;
     }
 } 

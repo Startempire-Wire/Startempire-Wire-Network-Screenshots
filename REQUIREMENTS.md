@@ -258,3 +258,49 @@
     * Resource cleanup
     * Service scaling
     * Load management 
+
+### 2.22 API Access Management
+* Direct API Consumer Management
+  * API Key Generation
+    - Secure key creation
+    - Tier association
+    - Usage tracking
+    - Billing integration
+  * Rate Limiting
+    - Tier-based limits
+    - Burst handling
+    - Overage management
+  * Quality Control
+    - Resolution settings
+    - Format selection
+    - Compression levels
+
+### 2.23 Service Integration
+* Ring Leader Integration
+  * Authentication Flow
+    - Token validation
+    - Membership verification
+    - Permission mapping
+  * Cache Coordination
+    - Network-wide invalidation
+    - Storage optimization
+    - Distribution strategy
+  * Quality Management
+    - Tier-based settings
+    - Dynamic adjustment
+    - Resource allocation
+
+### 2.24 Performance Metrics
+* Service Monitoring
+  * Resource Usage
+    - CPU utilization
+    - Memory consumption
+    - Storage metrics
+  * Response Times
+    - Generation latency
+    - Cache hit ratio
+    - API response time
+  * Quality Metrics
+    - Success rate
+    - Error distribution
+    - Service availability 

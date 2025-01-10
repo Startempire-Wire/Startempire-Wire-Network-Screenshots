@@ -116,7 +116,15 @@ spl_autoload_register(function ($class_name) {
 
 // Initialize components with proper dependency injection
 $logger = new SEWN_Logger();
-$settings = new SEWN_Settings($logger);
+$service_detector = new SEWN_Screenshot_Service_Detector($logger);
+$health_check = new SEWN_Health_Check($logger);
+
+// Initialize settings
+$settings = new SEWN_Settings(
+    $logger,
+    $service_detector,
+    $health_check
+);
 $api_manager = new SEWN_API_Manager($logger, $settings);
 $rate_limiter = new SEWN_Rate_Limiter($logger);
 $screenshot_service = new SEWN_Screenshot_Service($logger);
@@ -176,7 +184,11 @@ class SEWN_Screenshots {
 
     public function __construct() {
         $this->logger = new SEWN_Logger();
-        $this->settings = new SEWN_Settings($this->logger);
+        $this->settings = new SEWN_Settings(
+            $this->logger,
+            new SEWN_Screenshot_Service_Detector($this->logger),
+            new SEWN_Health_Check($this->logger)
+        );
         $this->rate_limiter = new SEWN_Rate_Limiter($this->logger);
         $this->api_tester = new SEWN_API_Tester($this->logger, $this->settings, $this->screenshot_service);
         $this->api_manager = new SEWN_API_Manager($this->logger, $this->settings);

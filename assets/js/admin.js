@@ -72,37 +72,50 @@
             e.preventDefault();
             
             const $button = $(this);
-            const nonce = $button.data('nonce');
-
+            const $status = $button.closest('.sewn-service-selection-wrapper')
+                                 .find('.sewn-service-status');
+            
+            // Prevent double-clicks
             if ($button.hasClass('loading')) {
                 return;
             }
-
+            
+            // Add loading state
             $button.addClass('loading')
-                   .prop('disabled', true);
-
+                  .prop('disabled', true)
+                  .find('.dashicons')
+                  .addClass('spin');
+            
+            // Clear previous status
+            $status.removeClass('notice-error notice-success')
+                  .empty();
+            
+            // Make AJAX call
             $.ajax({
                 url: ajaxurl,
                 type: 'POST',
                 data: {
                     action: 'sewn_refresh_services',
-                    nonce: nonce
+                    nonce: $button.data('nonce')
                 },
                 success: function(response) {
                     if (response.success) {
-                        // Replace the services section with updated content
-                        $('.sewn-services-status').replaceWith(response.data.html);
-                        showNotice('success', sewn_admin.strings.refresh_success);
+                        // Update service list
+                        location.reload();
                     } else {
-                        showNotice('error', response.data.message);
+                        $status.addClass('notice notice-error')
+                               .html(response.data.message);
                     }
                 },
                 error: function() {
-                    showNotice('error', sewn_admin.strings.refresh_failed);
+                    $status.addClass('notice notice-error')
+                           .html(sewn_admin.i18n.refresh_error);
                 },
                 complete: function() {
                     $button.removeClass('loading')
-                           .prop('disabled', false);
+                           .prop('disabled', false)
+                           .find('.dashicons')
+                           .removeClass('spin');
                 }
             });
         });
@@ -280,6 +293,40 @@
         });
     }
 
+    // Add this to the existing handleInstallationProgress function
+    function handleComponentActions() {
+        $('.sewn-component-action').on('click', function(e) {
+            e.preventDefault();
+            const $button = $(this);
+            const component = $button.data('component');
+            
+            if ($button.hasClass('loading')) return;
+            
+            $button.addClass('loading').prop('disabled', true);
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'sewn_handle_component_action',
+                    component: component,
+                    nonce: sewn_admin.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Refresh the installation status
+                        refreshInstallationStatus();
+                    } else {
+                        showNotice('error', response.data.message);
+                    }
+                },
+                complete: function() {
+                    $button.removeClass('loading').prop('disabled', false);
+                }
+            });
+        });
+    }
+
     // Initialize everything when document is ready
     $(document).ready(function() {
         handleServiceSelection();
@@ -290,6 +337,37 @@
         // New initializations
         handleInstallationProgress();
         handleHealthCheck();
+        handleComponentActions();
+
+        $('.sewn-refresh-service').on('click', function(e) {
+            e.preventDefault();
+            
+            const $button = $(this);
+            const $card = $button.closest('.sewn-service-card');
+            const serviceId = $card.data('service');
+            
+            // Add loading state
+            $button.addClass('is-busy').prop('disabled', true);
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'sewn_refresh_service',
+                    service: serviceId,
+                    nonce: $button.data('nonce')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        const $indicator = $card.find('.sewn-service-indicator');
+                        $indicator.find('.health-message').text(response.data.message);
+                    }
+                },
+                complete: function() {
+                    $button.removeClass('is-busy').prop('disabled', false);
+                }
+            });
+        });
     });
 
 })(jQuery);

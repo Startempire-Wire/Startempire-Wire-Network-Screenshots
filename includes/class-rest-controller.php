@@ -218,6 +218,45 @@ class SEWN_REST_Controller extends WP_REST_Controller {
     protected $namespace = 'sewn-screenshots/v1';
 
     /**
+     * Ring Leader client for network integration
+     * 
+     * Handles communication with the Ring Leader plugin for network operations.
+     * Manages authentication relay and network status coordination.
+     * Provides fallback mechanisms for standalone operation.
+     * Essential for network-aware screenshot distribution.
+     * 
+     * @var SEWN_Ring_Leader_Client
+     * @since 2.1.0
+     */
+    private $ring_leader_client;
+
+    /**
+     * Quality handler for membership-based settings
+     * 
+     * Manages screenshot quality settings based on membership tiers.
+     * Coordinates with Ring Leader for network-wide quality standards.
+     * Provides fallback quality settings for standalone operation.
+     * Ensures consistent output across network nodes.
+     * 
+     * @var SEWN_Quality_Handler
+     * @since 2.1.0
+     */
+    private $quality_handler;
+
+    /**
+     * Network-aware cache coordinator
+     * 
+     * Manages distributed cache operations across network nodes.
+     * Coordinates with Ring Leader for cache invalidation events.
+     * Handles local and network-wide cache operations.
+     * Provides performance optimization for network requests.
+     * 
+     * @var SEWN_Network_Cache
+     * @since 2.1.0
+     */
+    private $network_cache;
+
+    /**
      * Constructor
      *
      * Initializes the REST controller with required dependencies.
@@ -275,6 +314,18 @@ class SEWN_REST_Controller extends WP_REST_Controller {
         ]);
         
         add_action('rest_api_init', array($this, 'register_routes'));
+        
+        // Add network integration
+        try {
+            $this->ring_leader_client = new SEWN_Ring_Leader_Client($logger);
+            $this->quality_handler = new SEWN_Quality_Handler($logger);
+            $this->network_cache = new SEWN_Network_Cache($logger);
+        } catch (Exception $e) {
+            $this->logger->warning('Network features unavailable', [
+                'error' => $e->getMessage()
+            ]);
+            // Continue without network features
+        }
     }
 
     /**
@@ -3065,15 +3116,43 @@ class SEWN_REST_Controller extends WP_REST_Controller {
      *     )
      * )
      */
-    public function get_network_status() {
-        $status = [
-            'service_status' => $this->get_service_status(),
-            'network_status' => $this->check_network_connectivity(),
-            'cache_stats' => $this->cache->get_stats(),
-            'ring_leader_connected' => $this->check_ring_leader_connection()
+    public function get_network_status($request) {
+        if (!$this->ring_leader_client) {
+            return new WP_Error(
+                'network_unavailable',
+                'Network integration not available',
+                ['status' => 503]
+            );
+        }
+
+        $data = [
+            'connected' => $this->ring_leader_client->is_connected(),
+            'network_id' => $this->ring_leader_client->get_network_id(),
+            'cache_status' => $this->network_cache ? 
+                $this->network_cache->get_status() : 
+                'unavailable'
         ];
 
-        return rest_ensure_response($this->format_response($status));
+        if ($request['include_metrics']) {
+            $data['metrics'] = $this->get_network_metrics();
+        }
+
+        return $this->format_response($data);
+    }
+
+    /**
+     * Get network performance metrics
+     * 
+     * @return array Network metrics
+     */
+    private function get_network_metrics() {
+        return [
+            'cache_hit_ratio' => $this->network_cache ? 
+                $this->network_cache->get_hit_ratio() : 
+                0,
+            'average_response_time' => $this->get_average_response_time(),
+            'error_rate' => $this->get_error_rate()
+        ];
     }
 
     /**
@@ -3179,6 +3258,65 @@ class SEWN_REST_Controller extends WP_REST_Controller {
             return 'member';
         }
         return 'standalone';
+    }
+
+    /**
+     * Enhanced authentication check
+     * 
+     * @param WP_REST_Request $request The request object
+     * @return bool|WP_Error True if authorized, WP_Error if not
+     */
+    private function check_auth($request) {
+        // Use existing API key/JWT logic first
+        if ($token = $request->get_header('X-API-Key')) {
+            return $this->verify_api_key($token);
+        }
+        
+        // Add network check as another auth method
+        if ($this->ring_leader_client && ($token = $request->get_header('X-Ring-Leader-Token'))) {
+            return $this->ring_leader_client->verify_token($token);
+        }
+        
+        return new WP_Error('unauthorized', 'Valid authentication required');
+    }
+
+    /**
+     * Enhanced response formatting
+     * 
+     * @param mixed $data Response data
+     * @return WP_REST_Response
+     */
+    private function format_response($data) {
+        $response = [
+            'code' => 'success',
+            'message' => '',
+            'data' => $data
+        ];
+        
+        // Add network info to existing data structure
+        if ($this->ring_leader_client && $this->ring_leader_client->is_connected()) {
+            $response['data']['network'] = [
+                'connected' => true,
+                'network_id' => $this->ring_leader_client->get_network_id()
+            ];
+        }
+        
+        return new WP_REST_Response($response);
+    }
+
+    /**
+     * Enhanced rate limiting
+     * 
+     * @param string $key API key or token
+     * @return bool|WP_Error True if within limits, WP_Error if exceeded
+     */
+    private function apply_rate_limit($key) {
+        // Get tier from either API key or network membership
+        $tier = $this->ring_leader_client && $this->ring_leader_client->is_network_key($key)
+            ? $this->ring_leader_client->get_network_tier($key)
+            : $this->get_api_key_tier($key);
+        
+        return $this->rate_limiter->check_limit($key, $tier);
     }
 
 }

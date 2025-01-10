@@ -306,4 +306,57 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize new functionality
     initTabNavigation();
     initInstallationProgress();
-}); 
+});
+
+(function($) {
+    'use strict';
+
+    // Handle service refresh button clicks
+    $('.sewn-refresh-service').on('click', function(e) {
+        e.preventDefault();
+        const $button = $(this);
+        const $card = $button.closest('.sewn-service-card');
+        const serviceId = $card.data('service');
+        const $indicator = $card.find('.sewn-service-indicator');
+        const $healthMessage = $card.find('.health-message');
+
+        // Disable button and show loading state
+        $button.prop('disabled', true)
+               .find('.dashicons')
+               .addClass('spin');
+
+        // Make AJAX call to refresh service
+        $.ajax({
+            url: sewn_settings.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'sewn_refresh_service',
+                nonce: sewn_settings.admin_nonce,
+                service: serviceId
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Update status indicator and health message
+                    $indicator
+                        .removeClass('sewn-status-healthy sewn-status-error sewn-status-unknown')
+                        .addClass('sewn-status-' + response.data.status)
+                        .text(response.data.status);
+                    
+                    $healthMessage.text(response.data.message);
+                } else {
+                    alert(sewn_settings.i18n.error);
+                }
+            },
+            error: function() {
+                alert(sewn_settings.i18n.error);
+            },
+            complete: function() {
+                // Reset button state
+                $button.prop('disabled', false)
+                       .find('.dashicons')
+                       .removeClass('spin');
+            }
+        });
+    });
+
+})(jQuery); 

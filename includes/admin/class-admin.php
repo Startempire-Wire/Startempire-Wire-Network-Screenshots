@@ -35,6 +35,7 @@ class SEWN_Admin {
         // Add these lines to register AJAX handlers
         add_action('wp_ajax_sewn_get_swagger_docs', [$this, 'handle_swagger_docs']);
         add_action('wp_ajax_nopriv_sewn_get_swagger_docs', [$this, 'handle_swagger_docs']);
+        add_action('wp_ajax_sewn_refresh_service', [$this, 'handle_service_refresh']);
 
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
         add_action('admin_init', [$this, 'init_admin']);
@@ -56,20 +57,26 @@ class SEWN_Admin {
      */
     public function enqueue_admin_scripts($hook) {
         // Add debug logging
-        error_log('Enqueuing admin scripts on hook: ' . $hook);
+        $this->logger->debug('Enqueuing admin scripts on hook: ' . $hook);
 
         // Only load on our plugin pages
-        if (!in_array($hook, ['tools_page_sewn-screenshot-tester', 'sewn-screenshots_page_sewn-screenshots-api'])) {
+        if (!in_array($hook, [
+            'tools_page_sewn-screenshot-tester', 
+            'sewn-screenshots_page_sewn-screenshots-api',
+            'settings_page_sewn-screenshot-settings'
+        ])) {
             return;
         }
 
+        // Enqueue admin styles
         wp_enqueue_style(
             'sewn-admin-style',
-            plugins_url('assets/css/admin-settings.css', SEWN_PLUGIN_FILE),
+            plugins_url('assets/css/admin.css', SEWN_PLUGIN_FILE),
             [],
             SEWN_SCREENSHOTS_VERSION
         );
 
+        // Enqueue admin settings script
         wp_enqueue_script(
             'sewn-admin-settings',
             plugins_url('assets/js/admin-settings.js', SEWN_PLUGIN_FILE),
@@ -82,13 +89,14 @@ class SEWN_Admin {
             'rest_url' => rest_url(),
             'rest_nonce' => wp_create_nonce('wp_rest'),
             'ajaxurl' => admin_url('admin-ajax.php'),
+            'admin_nonce' => wp_create_nonce('sewn_admin_nonce'),
             'nonce' => wp_create_nonce('sewn_screenshot_test'),
-            'is_production' => $this->screenshot_service->is_production_server()
-        ]);
-
-        $this->logger->debug('Admin scripts enqueued', [
-            'hook' => $hook,
-            'version' => SEWN_VERSION
+            'is_production' => $this->screenshot_service->is_production_server(),
+            'i18n' => [
+                'refreshing' => __('Refreshing...', 'startempire-wire-network-screenshots'),
+                'error' => __('Error refreshing service', 'startempire-wire-network-screenshots'),
+                'success' => __('Service status updated', 'startempire-wire-network-screenshots')
+            ]
         ]);
 
         // Ensure dashicons are loaded
@@ -491,5 +499,42 @@ class SEWN_Admin {
         }
         
         wp_die();
+    }
+
+    /**
+     * Handle AJAX request to refresh service status
+     */
+    public function handle_service_refresh() {
+        try {
+            // Verify nonce
+            check_ajax_referer('sewn_admin_nonce', 'nonce');
+
+            // Get service ID from request
+            $service_id = isset($_POST['service']) ? sanitize_text_field($_POST['service']) : '';
+            if (empty($service_id)) {
+                throw new Exception('Service ID is required');
+            }
+
+            // Get fresh service status
+            $status = $this->get_service_status();
+            $health_info = [
+                'status' => isset($status[$service_id]) && $status[$service_id] ? 'healthy' : 'error',
+                'message' => isset($status[$service_id]) && $status[$service_id] 
+                    ? __('Service is responding normally', 'startempire-wire-network-screenshots')
+                    : __('Service is not available', 'startempire-wire-network-screenshots')
+            ];
+
+            wp_send_json_success($health_info);
+
+        } catch (Exception $e) {
+            $this->logger->error('Service refresh failed', [
+                'error' => $e->getMessage(),
+                'service' => $service_id ?? 'unknown'
+            ]);
+
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
     }
 } 

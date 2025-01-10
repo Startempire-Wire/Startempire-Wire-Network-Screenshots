@@ -1439,3 +1439,231 @@
     margin-right: 5px;
     vertical-align: middle;
 }
+
+/* Service Selection Styles */
+.sewn-service-selection-wrapper {
+    margin: 15px 0;
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.sewn-service-select {
+    min-width: 200px;
+    margin-right: 10px;
+}
+
+.sewn-refresh-services {
+    vertical-align: middle;
+}
+
+.sewn-refresh-services .dashicons {
+    margin-top: 4px;
+}
+
+.sewn-refresh-services .dashicons.spin {
+    animation: sewn-spin 1.5s linear infinite;
+}
+
+.sewn-service-status {
+    margin-top: 10px;
+    padding: 10px;
+    display: none;
+}
+
+.sewn-service-status.notice {
+    display: block;
+    margin: 10px 0;
+}
+
+/* Service Status Indicators */
+.sewn-service-indicator {
+    display: inline-flex;
+    margin-left: 5px;
+    vertical-align: middle;
+}
+
+.sewn-service-indicator.available {
+    color: #46b450;
+}
+
+.sewn-service-indicator.unavailable {
+    color: #dc3232;
+}
+
+@keyframes sewn-spin {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Service Grid Layout - Basic */
+.sewn-services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+/* Responsive adjustment */
+@media screen and (max-width: 782px) {
+    .sewn-services-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Service Card Styling */
+.sewn-service-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 16px;
+}
+
+.sewn-service-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.sewn-service-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sewn-service-details {
+    color: #4a5568;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.sewn-service-health {
+    margin-top: 12px;
+    padding: 8px;
+    background: #f8fafc;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+    .sewn-service-card {
+        padding: 16px;
+    }
+    
+    .sewn-service-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .sewn-service-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+/* Small screen optimizations */
+@media screen and (max-width: 480px) {
+    .sewn-service-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .sewn-service-indicator {
+        margin-left: 0;
+    }
+
+    .sewn-service-health {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+}
+
+/* Service Card Refresh Button */
+.sewn-refresh-service {
+    padding: 4px !important;
+    height: auto !important;
+    min-height: 30px;
+    line-height: 1 !important;
+}
+
+.sewn-refresh-service .dashicons {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+    vertical-align: middle;
+    transition: transform 0.3s ease;
+}
+
+/* Spinning animation for refresh */
+.sewn-refresh-service .dashicons.spin {
+    animation: sewn-spin 1s linear infinite;
+}
+
+@keyframes sewn-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Service status indicators */
+.sewn-service-indicator {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 3px;
+    margin-right: 8px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.sewn-status-healthy {
+    background-color: #e6ffe6;
+    color: #006600;
+}
+
+.sewn-status-error {
+    background-color: #ffe6e6;
+    color: #cc0000;
+}
+
+.sewn-status-unknown {
+    background-color: #f2f2f2;
+    color: #666666;
+}
+
+/* Service Title and Version */
+.sewn-service-title {
+    margin-bottom: 8px;
+}
+
+.sewn-service-title h3 {
+    margin: 0 0 4px 0;
+}
+
+.sewn-service-version {
+    display: inline-block;
+    font-size: 12px;
+    color: #666;
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 8px;
+}
+
+/* Service Description */
+.sewn-service-description {
+    margin-bottom: 12px;
+    color: #555;
+}

@@ -7,191 +7,185 @@
 if (!defined('ABSPATH')) exit;
 
 class SEWN_Health_Check {
+    /** @var SEWN_Logger */
     private $logger;
-    
-    public function __construct($logger) {
+
+    /** @var array */
+    private $health_status = [];
+
+    /**
+     * Constructor
+     * 
+     * @param SEWN_Logger $logger
+     */
+    public function __construct(SEWN_Logger $logger) {
         $this->logger = $logger;
-        add_filter('site_status_tests', [$this, 'register_tests']);
-        add_action('wp_ajax_sewn_run_health_check', [$this, 'run_health_check']);
     }
-    
-    public function register_tests($tests) {
-        $tests['direct']['sewn_screenshot_tools'] = [
-            'label' => __('Screenshot Tools Status', 'startempire-wire-network-screenshots'),
-            'test' => [$this, 'check_screenshot_tools']
-        ];
-        
-        $tests['direct']['sewn_api_connectivity'] = [
-            'label' => __('API Connectivity', 'startempire-wire-network-screenshots'),
-            'test' => [$this, 'check_api_connectivity']
-        ];
-        
-        return $tests;
-    }
-    
-    public function check_screenshot_tools() {
-        $detector = new SEWN_Screenshot_Service_Detector($this->logger);
-        $services = $detector->detect_services(true);
-        
-        return [
-            'label' => __('Screenshot tools status', 'startempire-wire-network-screenshots'),
-            'status' => $this->get_health_status($services),
-            'badge' => [
-                'label' => __('Screenshot Service', 'startempire-wire-network-screenshots'),
-                'color' => 'blue'
+
+    /**
+     * Get service health status
+     * 
+     * @param string $service_name Service identifier
+     * @return array Health status data
+     */
+    public function get_service_health($service_name = null) {
+        $health_data = [
+            'wkhtmltoimage' => [
+                'status' => $this->check_wkhtmltoimage_health(),
+                'last_check' => get_option('sewn_wkhtmltoimage_last_check', ''),
+                'details' => $this->get_service_details('wkhtmltoimage'),
+                'message' => $this->get_status_message('wkhtmltoimage')
             ],
-            'description' => $this->get_health_description($services),
-            'actions' => $this->get_health_actions($services),
-            'test' => 'sewn_screenshot_tools'
+            'chrome-php' => [
+                'status' => $this->check_chrome_php_health(),
+                'last_check' => get_option('sewn_chrome_php_last_check', ''),
+                'details' => $this->get_service_details('chrome-php'),
+                'message' => $this->get_status_message('chrome-php')
+            ],
+            'screenshot-machine' => [
+                'status' => $this->check_screenshot_machine_health(),
+                'last_check' => get_option('sewn_screenshot_machine_last_check', ''),
+                'details' => $this->get_service_details('screenshot-machine'),
+                'message' => $this->get_status_message('screenshot-machine')
+            ]
         ];
+
+        $this->logger->debug('Health check performed', [
+            'service' => $service_name,
+            'health_data' => $service_name ? ($health_data[$service_name] ?? null) : $health_data
+        ]);
+
+        return $service_name ? ($health_data[$service_name] ?? null) : $health_data;
     }
-    
-    public function check_api_connectivity() {
-        try {
-            $api_manager = new SEWN_API_Manager($this->logger);
-            $status = $api_manager->check_connectivity();
-            
-            return [
-                'label' => __('API Connectivity', 'startempire-wire-network-screenshots'),
-                'status' => $status ? 'good' : 'critical',
-                'badge' => [
-                    'label' => __('API', 'startempire-wire-network-screenshots'),
-                    'color' => $status ? 'green' : 'red'
-                ],
-                'description' => $status 
-                    ? __('API connection is working properly.', 'startempire-wire-network-screenshots')
-                    : __('Unable to connect to the API service.', 'startempire-wire-network-screenshots'),
-                'actions' => '',
-                'test' => 'sewn_api_connectivity'
-            ];
-        } catch (Exception $e) {
-            $this->logger->error('API connectivity check failed', [
-                'error' => $e->getMessage()
-            ]);
-            
-            return [
-                'label' => __('API Connectivity', 'startempire-wire-network-screenshots'),
-                'status' => 'critical',
-                'badge' => [
-                    'label' => __('API', 'startempire-wire-network-screenshots'),
-                    'color' => 'red'
-                ],
-                'description' => $e->getMessage(),
-                'actions' => '',
-                'test' => 'sewn_api_connectivity'
-            ];
+
+    /**
+     * Check wkhtmltoimage health
+     * 
+     * @return string Status: 'healthy', 'warning', or 'error'
+     */
+    private function check_wkhtmltoimage_health() {
+        exec('which wkhtmltoimage', $output, $return_var);
+        if ($return_var !== 0) {
+            return 'error';
         }
+
+        exec('wkhtmltoimage --version', $output, $return_var);
+        update_option('sewn_wkhtmltoimage_last_check', current_time('mysql'));
+        
+        return $return_var === 0 ? 'healthy' : 'warning';
     }
-    
-    public function run_health_check() {
-        check_ajax_referer('sewn_health_check', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions', 'startempire-wire-network-screenshots')]);
+
+    /**
+     * Check Chrome PHP health
+     * 
+     * @return string Status: 'healthy', 'warning', or 'error'
+     */
+    private function check_chrome_php_health() {
+        if (!class_exists('HeadlessChromium\Browser')) {
+            return 'error';
         }
+
+        exec('google-chrome --version', $output, $return_var);
+        update_option('sewn_chrome_php_last_check', current_time('mysql'));
         
-        try {
-            $results = [
-                'screenshot_tools' => $this->check_screenshot_tools(),
-                'api_connectivity' => $this->check_api_connectivity(),
-                'system_info' => $this->get_system_info()
-            ];
-            
-            wp_send_json_success([
-                'html' => $this->render_health_results($results)
-            ]);
-        } catch (Exception $e) {
-            $this->logger->error('Health check failed', [
-                'error' => $e->getMessage()
-            ]);
-            
-            wp_send_json_error([
-                'message' => $e->getMessage()
-            ]);
-        }
+        return $return_var === 0 ? 'healthy' : 'warning';
     }
-    
-    private function get_health_status($services) {
-        if (empty($services['services'])) {
-            return 'critical';
+
+    /**
+     * Check Screenshot Machine API health
+     * 
+     * @return string Status: 'healthy', 'warning', or 'error'
+     */
+    private function check_screenshot_machine_health() {
+        $api_key = get_option('sewn_screenshot_machine_key');
+        if (empty($api_key)) {
+            return 'error';
         }
+
+        // Perform a test API call
+        $test_url = 'https://api.screenshotmachine.com/?key=' . $api_key . '&url=https://example.com&test=1';
+        $response = wp_remote_get($test_url);
         
-        $active_services = array_filter($services['services'], function($service) {
-            return $service['available'] === true;
-        });
+        update_option('sewn_screenshot_machine_last_check', current_time('mysql'));
         
-        if (empty($active_services)) {
-            return 'critical';
+        if (is_wp_error($response)) {
+            return 'error';
         }
-        
-        return count($active_services) === count($services['services']) ? 'good' : 'recommended';
+
+        $code = wp_remote_retrieve_response_code($response);
+        return ($code >= 200 && $code < 300) ? 'healthy' : 'warning';
     }
-    
-    private function get_health_description($services) {
-        if (empty($services['services'])) {
-            return __('No screenshot services detected.', 'startempire-wire-network-screenshots');
-        }
-        
-        $available = [];
-        $unavailable = [];
-        
-        foreach ($services['services'] as $id => $service) {
-            if ($service['available']) {
-                $available[] = $id;
-            } else {
-                $unavailable[] = $id;
-            }
-        }
-        
-        $description = '';
-        
-        if (!empty($available)) {
-            $description .= sprintf(
-                __('Available services: %s', 'startempire-wire-network-screenshots'),
-                implode(', ', $available)
-            );
-        }
-        
-        if (!empty($unavailable)) {
-            $description .= sprintf(
-                __('Unavailable services: %s', 'startempire-wire-network-screenshots'),
-                implode(', ', $unavailable)
-            );
-        }
-        
-        return $description;
-    }
-    
-    private function get_health_actions($services) {
-        $actions = '';
-        
-        foreach ($services['services'] as $id => $service) {
-            if (!$service['available']) {
-                $actions .= sprintf(
-                    '<a href="%s" class="button button-secondary">%s</a> ',
-                    admin_url('admin.php?page=sewn-screenshots-settings&action=install&tool=' . $id),
-                    sprintf(__('Install %s', 'startempire-wire-network-screenshots'), $id)
-                );
-            }
-        }
-        
-        return $actions;
-    }
-    
-    private function get_system_info() {
-        return [
-            'php_version' => PHP_VERSION,
-            'wp_version' => get_bloginfo('version'),
-            'memory_limit' => ini_get('memory_limit'),
-            'max_execution_time' => ini_get('max_execution_time'),
-            'upload_max_filesize' => ini_get('upload_max_filesize'),
-            'post_max_size' => ini_get('post_max_size')
+
+    /**
+     * Get service details
+     * 
+     * @param string $service Service identifier
+     * @return array Service details
+     */
+    private function get_service_details($service) {
+        $details = [
+            'version' => null,
+            'config' => [],
+            'errors' => []
         ];
+
+        switch ($service) {
+            case 'wkhtmltoimage':
+                exec('wkhtmltoimage --version', $output, $return_var);
+                $details['version'] = $return_var === 0 ? trim($output[0]) : null;
+                $details['config'] = [
+                    'path' => exec('which wkhtmltoimage'),
+                    'enabled' => get_option('sewn_wkhtmltoimage_enabled', true)
+                ];
+                break;
+
+            case 'chrome-php':
+                exec('google-chrome --version', $output, $return_var);
+                $details['version'] = $return_var === 0 ? trim($output[0]) : null;
+                $details['config'] = [
+                    'enabled' => get_option('sewn_chrome_php_enabled', true)
+                ];
+                break;
+
+            case 'screenshot-machine':
+                $details['version'] = 'API';
+                $details['config'] = [
+                    'api_key' => get_option('sewn_screenshot_machine_key') ? 'Configured' : 'Not configured',
+                    'enabled' => get_option('sewn_screenshot_machine_enabled', true)
+                ];
+                break;
+        }
+
+        return $details;
     }
-    
-    private function render_health_results($results) {
-        ob_start();
-        include SEWN_SCREENSHOTS_PATH . 'admin/views/health-check-results.php';
-        return ob_get_clean();
+
+    /**
+     * Get status message for service
+     * 
+     * @param string $service Service identifier
+     * @return string Status message
+     */
+    private function get_status_message($service) {
+        $status = $this->{'check_' . str_replace('-', '_', $service) . '_health'}();
+        
+        $messages = [
+            'wkhtmltoimage' => [
+                'healthy' => __('Service is running normally', 'startempire-wire-network-screenshots'),
+                'warning' => __('Service is available but may have issues', 'startempire-wire-network-screenshots'),
+                'error' => __('Service is not installed or not accessible', 'startempire-wire-network-screenshots')
+            ],
+            'chrome-php' => [
+                'healthy' => __('Chrome PHP is properly configured', 'startempire-wire-network-screenshots'),
+                'warning' => __('Chrome PHP is available but may have issues', 'startempire-wire-network-screenshots'),
+                'error' => __('Chrome PHP is not installed or not accessible', 'startempire-wire-network-screenshots')
+            ],
+            'screenshot-machine' => [
+                'healthy' => __('API is responding normally', 'startempire-wire-network-screenshots'),
+                'warning' => __('API is accessible but may have issues', 'startempire-wire-network-screenshots'),
+                'error' => __('API key is missing or invalid', 'startempire-wire-network-screenshots')
+            ]
+        ];
+
+        return $messages[$service][$status] ?? __('Status unknown', 'startempire-wire-network-screenshots');
     }
 } 
