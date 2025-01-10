@@ -107,7 +107,10 @@ openapi.yaml
 /temp-captures/
 *.screenshot.html
 *.preview.html
-/logs/*.log
+/logs/*
 !/logs/.htaccess
 /config/service-status.json
 /config/api-quotas.json
+
+wp-content/plugins/startempire-wire-network-screenshots/logs/*
+!wp-content/plugins/startempire-wire-network-screenshots/logs/.htaccess
