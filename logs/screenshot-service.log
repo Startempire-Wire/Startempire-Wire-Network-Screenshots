@@ -6636,3 +6636,375 @@
 [2025-01-10 06:56:04] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
 [2025-01-10 06:56:04] DEBUG: Initializing plugin hooks
 [2025-01-10 06:56:04] DEBUG: All required columns verified
+[2025-01-10 09:41:35] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:41:35] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 09:41:35] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 09:41:35] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:41:35] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 09:41:35] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 09:41:35] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:41:35] DEBUG: Menu manager initialized
+[2025-01-10 09:41:35] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 09:41:35] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 09:41:35] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:41:35] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 09:41:35] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 09:41:35] DEBUG: Initializing plugin hooks
+[2025-01-10 09:41:42] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:41:42] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 09:41:42] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 09:41:42] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:41:42] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 09:41:43] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 09:41:43] DEBUG: All required columns verified
+[2025-01-10 09:41:44] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:41:45] DEBUG: Menu manager initialized
+[2025-01-10 09:41:45] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 09:41:45] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 09:41:45] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:41:45] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 09:41:46] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 09:41:46] DEBUG: Initializing plugin hooks
+[2025-01-10 09:43:34] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:43:35] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 09:43:35] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 09:43:36] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:43:36] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 09:43:36] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 09:43:36] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:43:36] DEBUG: Menu manager initialized
+[2025-01-10 09:43:36] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 09:43:36] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 09:43:36] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:43:36] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 09:43:36] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 09:43:36] DEBUG: Initializing plugin hooks
+[2025-01-10 09:43:37] DEBUG: All required columns verified
+[2025-01-10 09:45:34] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:45:34] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 09:45:34] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 09:45:34] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:45:34] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 09:45:34] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 09:45:34] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:45:34] DEBUG: Menu manager initialized
+[2025-01-10 09:45:34] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 09:45:34] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 09:45:34] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:45:34] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 09:45:34] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 09:45:35] DEBUG: Initializing plugin hooks
+[2025-01-10 09:45:37] DEBUG: All required columns verified
+[2025-01-10 09:47:34] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:47:34] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 09:47:34] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 09:47:34] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:47:34] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 09:47:34] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 09:47:34] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:47:34] DEBUG: Menu manager initialized
+[2025-01-10 09:47:34] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 09:47:34] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 09:47:34] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:47:34] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 09:47:34] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 09:47:34] DEBUG: Initializing plugin hooks
+[2025-01-10 09:47:36] DEBUG: All required columns verified
+[2025-01-10 09:49:33] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:49:33] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 09:49:33] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 09:49:33] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:49:33] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 09:49:33] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 09:49:33] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:49:33] DEBUG: Menu manager initialized
+[2025-01-10 09:49:33] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 09:49:33] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 09:49:33] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:49:33] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 09:49:33] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 09:49:33] DEBUG: Initializing plugin hooks
+[2025-01-10 09:49:34] DEBUG: All required columns verified
+[2025-01-10 09:51:33] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:51:33] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 09:51:33] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 09:51:33] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:51:33] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 09:51:33] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 09:51:33] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:51:33] DEBUG: Menu manager initialized
+[2025-01-10 09:51:33] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 09:51:33] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 09:51:33] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 09:51:33] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 09:51:33] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 09:51:33] DEBUG: Initializing plugin hooks
+[2025-01-10 09:51:34] DEBUG: All required columns verified
+[2025-01-10 10:05:31] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:05:31] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:05:31] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:05:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:05:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:05:31] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:05:31] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:05:31] DEBUG: Menu manager initialized
+[2025-01-10 10:05:31] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:05:31] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:05:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:05:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:05:31] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:05:31] DEBUG: Initializing plugin hooks
+[2025-01-10 10:05:34] DEBUG: All required columns verified
+[2025-01-10 10:07:31] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:07:32] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:07:32] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:07:32] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:07:32] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:07:32] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:07:32] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:07:32] DEBUG: Menu manager initialized
+[2025-01-10 10:07:32] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:07:33] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:07:33] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:07:33] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:07:34] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:07:34] DEBUG: Initializing plugin hooks
+[2025-01-10 10:07:35] DEBUG: All required columns verified
+[2025-01-10 10:09:31] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:09:32] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:09:32] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:09:32] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:09:32] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:09:32] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:09:32] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:09:32] DEBUG: Menu manager initialized
+[2025-01-10 10:09:32] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:09:32] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:09:32] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:09:32] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:09:32] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:09:32] DEBUG: Initializing plugin hooks
+[2025-01-10 10:09:32] DEBUG: All required columns verified
+[2025-01-10 10:11:31] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:11:31] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:11:31] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:11:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:11:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:11:31] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:11:31] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:11:31] DEBUG: Menu manager initialized
+[2025-01-10 10:11:31] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:11:31] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:11:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:11:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:11:31] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:11:31] DEBUG: Initializing plugin hooks
+[2025-01-10 10:11:31] DEBUG: All required columns verified
+[2025-01-10 10:13:31] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:13:31] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:13:31] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:13:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:13:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:13:31] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:13:31] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:13:31] DEBUG: Menu manager initialized
+[2025-01-10 10:13:31] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:13:31] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:13:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:13:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:13:31] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:13:31] DEBUG: Initializing plugin hooks
+[2025-01-10 10:13:32] DEBUG: All required columns verified
+[2025-01-10 10:14:31] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:14:32] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:14:32] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:14:32] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:14:32] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:14:32] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:14:33] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:14:33] DEBUG: Menu manager initialized
+[2025-01-10 10:14:33] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:14:33] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:14:33] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:14:33] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:14:33] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:14:33] DEBUG: Initializing plugin hooks
+[2025-01-10 10:14:38] DEBUG: All required columns verified
+[2025-01-10 10:16:31] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:16:33] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:16:34] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:16:34] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:16:34] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:16:35] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:16:36] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:16:36] DEBUG: Menu manager initialized
+[2025-01-10 10:16:36] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:16:36] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:16:37] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:16:37] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:16:38] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:16:39] DEBUG: Initializing plugin hooks
+[2025-01-10 10:16:46] DEBUG: All required columns verified
+[2025-01-10 10:16:49] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:16:50] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:16:50] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:16:51] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:16:51] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:16:51] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:16:53] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:16:54] DEBUG: Menu manager initialized
+[2025-01-10 10:16:55] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:16:55] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:16:55] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:16:56] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:16:57] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:16:57] DEBUG: Initializing plugin hooks
+[2025-01-10 10:18:31] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:18:31] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:18:31] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:18:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:18:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:18:31] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:18:31] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:18:31] DEBUG: Menu manager initialized
+[2025-01-10 10:18:31] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:18:31] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:18:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:18:31] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:18:31] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:18:31] DEBUG: Initializing plugin hooks
+[2025-01-10 10:18:35] DEBUG: All required columns verified
+[2025-01-10 10:20:08] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:20:08] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:20:08] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:20:08] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:20:08] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:20:08] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:20:08] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:20:08] DEBUG: Menu manager initialized
+[2025-01-10 10:20:08] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:20:08] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:20:08] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:20:08] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:20:08] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:20:08] DEBUG: Initializing plugin hooks
+[2025-01-10 10:20:09] DEBUG: All required columns verified
+[2025-01-10 10:21:07] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:21:07] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:21:07] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:21:07] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:21:07] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:21:07] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:21:08] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:21:08] DEBUG: Menu manager initialized
+[2025-01-10 10:21:08] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:21:08] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:21:09] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:21:09] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:21:09] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:21:09] DEBUG: Initializing plugin hooks
+[2025-01-10 10:21:12] DEBUG: All required columns verified
+[2025-01-10 10:22:07] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:22:07] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:22:07] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:22:07] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:22:08] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:22:08] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:22:08] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:22:08] DEBUG: Menu manager initialized
+[2025-01-10 10:22:08] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:22:08] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:22:08] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:22:08] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:22:08] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:22:08] DEBUG: Initializing plugin hooks
+[2025-01-10 10:22:08] DEBUG: All required columns verified
+[2025-01-10 10:23:07] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:23:07] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:23:07] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:23:07] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:23:07] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:23:07] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:23:07] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:23:07] DEBUG: Menu manager initialized
+[2025-01-10 10:23:07] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:23:07] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:23:07] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:23:07] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:23:08] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:23:08] DEBUG: Initializing plugin hooks
+[2025-01-10 10:23:09] DEBUG: All required columns verified
+[2025-01-10 10:25:08] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:25:08] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:25:08] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:25:08] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:25:08] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:25:08] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:25:08] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:25:08] DEBUG: Menu manager initialized
+[2025-01-10 10:25:08] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:25:08] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:25:08] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:25:08] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:25:08] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:25:08] DEBUG: Initializing plugin hooks
+[2025-01-10 10:25:08] DEBUG: All required columns verified
+[2025-01-10 10:26:51] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:26:51] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:26:51] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:26:51] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:26:51] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:26:51] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:26:51] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:26:51] DEBUG: Menu manager initialized
+[2025-01-10 10:26:51] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:26:51] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:26:51] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:26:51] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:26:51] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:26:51] DEBUG: Initializing plugin hooks
+[2025-01-10 10:26:51] DEBUG: All required columns verified
+[2025-01-10 10:27:51] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:27:51] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:27:51] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:27:51] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:27:51] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:27:52] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:27:52] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:27:52] DEBUG: Menu manager initialized
+[2025-01-10 10:27:53] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:27:53] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:27:53] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:27:53] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:27:53] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:27:53] DEBUG: Initializing plugin hooks
+[2025-01-10 10:27:54] DEBUG: All required columns verified
+[2025-01-10 10:29:51] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:29:51] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:29:51] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:29:51] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:29:51] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:29:51] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:29:51] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:29:51] DEBUG: Menu manager initialized
+[2025-01-10 10:29:51] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:29:51] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:29:51] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:29:51] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:29:51] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:29:51] DEBUG: Initializing plugin hooks
+[2025-01-10 10:29:52] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:29:52] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:29:52] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:29:52] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:29:52] DEBUG: All required columns verified
+[2025-01-10 10:29:52] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:29:52] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:29:52] DEBUG: API Manager initialized - {"settings":{},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:29:52] DEBUG: Menu manager initialized
+[2025-01-10 10:29:52] WARNING: wkhtmltoimage not found, using fallback service
+[2025-01-10 10:29:52] DEBUG: Initializing REST Controller - {"has_logger":true,"has_rate_limiter":true}
+[2025-01-10 10:29:52] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"active_mode":"primary","primary_configured":"1","has_primary_key":true}
+[2025-01-10 10:29:52] DEBUG: API Manager initialized - {"settings":{"fallback_service":"screenshotmachine","api_mode":"primary"},"has_api_manager":true}
+[2025-01-10 10:29:52] DEBUG: REST Controller initialization complete - {"has_screenshot_service":true}
+[2025-01-10 10:29:52] DEBUG: Initializing plugin hooks
