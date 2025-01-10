@@ -1,308 +1,309 @@
-jQuery(document).ready(function($) {
-    // Toggle API key visibility
-    $('.sewn-toggle-visibility').on('click', function() {
-        var targetId = $(this).data('target');
-        var input = $('#' + targetId);
-        
-        if (input.attr('type') === 'password') {
-            input.attr('type', 'text');
-        } else {
-            input.attr('type', 'password');
-        }
-    });
+document.addEventListener('DOMContentLoaded', function() {
+    // Debug log to verify script loading
+    console.log('SEWN Admin Settings JS loaded');
 
-    // Make priority list sortable
-    if ($.fn.sortable) {
-        $('#sewn-priority-list').sortable({
-            update: function(event, ui) {
-                $(this).find('li').each(function(index) {
-                    $(this).find('input[type="hidden"]').val($(this).data('service'));
-                });
+    const tabButtons = document.querySelectorAll('.nav-tab');
+    const tabPanels = document.querySelectorAll('.sewn-tab-panel');
+
+    function switchTab(targetId) {
+        console.log('Switching to tab:', targetId);
+
+        // Update active tab
+        tabButtons.forEach(tab => {
+            tab.classList.remove('nav-tab-active');
+            if (tab.dataset.target === targetId) {
+                tab.classList.add('nav-tab-active');
+            }
+        });
+
+        // Update active panel
+        tabPanels.forEach(panel => {
+            panel.style.display = 'none';
+            panel.classList.remove('is-active');
+            if (panel.id === targetId) {
+                panel.style.display = 'block';
+                panel.classList.add('is-active');
+            }
+        });
+
+        // Save selection via AJAX
+        const formData = new FormData();
+        formData.append('action', 'sewn_update_api_mode');
+        formData.append('mode', targetId === 'primary-api-panel' ? 'primary' : 'fallback');
+        formData.append('nonce', sewn_settings.nonce);
+
+        fetch(ajaxurl, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const notice = document.createElement('div');
+                notice.className = 'notice notice-success is-dismissible';
+                notice.innerHTML = '<p>API mode updated successfully</p>';
+                
+                const wrapper = document.querySelector('.nav-tab-wrapper');
+                wrapper.parentNode.insertBefore(notice, wrapper.nextSibling);
+                
+                setTimeout(() => {
+                    notice.remove();
+                }, 3000);
             }
         });
     }
 
-    // Test screenshot functionality
-    $('#sewn-test-button').on('click', function() {
-        var button = $(this);
-        var url = $('#sewn-test-url').val();
-        var resultDiv = $('#sewn-test-result');
-        var loadingHtml = '<div class="sewn-loading">' +
-                          '<span class="spinner is-active"></span>' +
-                          '<p>Taking screenshot...</p>' +
-                          '</div>';
+    // Add click handlers to tabs
+    tabButtons.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = e.currentTarget.dataset.target;
+            switchTab(targetId);
+        });
+    });
 
-        // Get options
-        var options = {
-            width: parseInt($('#sewn-test-width').val()) || 1280,
-            height: parseInt($('#sewn-test-height').val()) || 800,
-            quality: parseInt($('#sewn-test-quality').val()) || 85
+    // Show initial tab
+    const activeTab = document.querySelector('.nav-tab-active');
+    if (activeTab) {
+        switchTab(activeTab.dataset.target);
+    } else {
+        // Default to first tab
+        const firstTab = document.querySelector('.nav-tab');
+        if (firstTab) {
+            switchTab(firstTab.dataset.target);
+        }
+    }
+
+    // Add API Key Generation Handler
+    const regenerateButton = document.querySelector('.regenerate-api-key[data-service="primary"]');
+    if (regenerateButton) {
+        regenerateButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            const button = e.currentTarget;
+            const feedback = button.parentNode.querySelector('.api-feedback');
+            const input = document.getElementById('sewn_primary_key');
+
+            // Disable button during request
+            button.disabled = true;
+            button.textContent = 'Generating...';
+
+            // Create and send request
+            const formData = new FormData();
+            formData.append('action', 'sewn_regenerate_api_key');
+            formData.append('nonce', sewn_settings.nonce);
+            formData.append('service', 'primary');
+
+            fetch(ajaxurl, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update input with new key
+                    input.value = data.data.key;
+                    
+                    // Show success message
+                    feedback.innerHTML = '<div class="notice notice-success inline"><p>' + 
+                        data.data.message + '</p></div>';
+                    
+                    // Update button text
+                    button.textContent = 'Regenerate Key';
+                    
+                    // Update status indicator if it exists
+                    const statusDot = document.querySelector('.key-status');
+                    if (statusDot) {
+                        statusDot.classList.remove('inactive');
+                        statusDot.classList.add('active');
+                        statusDot.querySelector('span:not(.status-dot)').textContent = 'Primary API Key: Active';
+                    }
+                } else {
+                    // Show error message
+                    feedback.innerHTML = '<div class="notice notice-error inline"><p>' + 
+                        'Error generating API key' + '</p></div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                feedback.innerHTML = '<div class="notice notice-error inline"><p>' + 
+                    'Error generating API key' + '</p></div>';
+            })
+            .finally(() => {
+                button.disabled = false;
+            });
+        });
+    }
+
+    // Copy functionality
+    document.querySelectorAll('.copy-button').forEach(button => {
+        button.addEventListener('click', function() {
+            const textToCopy = this.dataset.clipboardText;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                // Visual feedback
+                const icon = this.querySelector('.dashicons');
+                icon.classList.remove('dashicons-clipboard');
+                icon.classList.add('dashicons-yes');
+                
+                setTimeout(() => {
+                    icon.classList.remove('dashicons-yes');
+                    icon.classList.add('dashicons-clipboard');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        });
+    });
+
+    // Add screenshot button handler
+    const screenshotButton = document.getElementById('sewn-test-button');
+    if (screenshotButton) {
+        screenshotButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Screenshot button clicked - initiating request');
+
+            const testUrl = document.getElementById('test-url').value;
+            const width = document.getElementById('width').value;
+            const height = document.getElementById('height').value;
+            const quality = document.getElementById('quality').value;
+            const feedback = document.getElementById('test-feedback');
+            const spinner = document.querySelector('.spinner');
+
+            console.log('Sending request with data:', {
+                url: testUrl,
+                width: width,
+                height: height,
+                quality: quality
+            });
+
+            // Show spinner and disable button
+            spinner.style.visibility = 'visible';
+            screenshotButton.disabled = true;
+
+            // Use REST API instead of admin-ajax
+            fetch(`${sewn_settings.rest_url}sewn-screenshots/v1/screenshot`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': sewn_settings.rest_nonce
+                },
+                body: JSON.stringify({
+                    url: testUrl,
+                    options: {
+                        width: parseInt(width),
+                        height: parseInt(height),
+                        quality: parseInt(quality)
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    feedback.innerHTML = `
+                        <div class="notice notice-success inline">
+                            <p>Screenshot taken successfully</p>
+                            <div class="screenshot-preview">
+                                <img src="${data.screenshot_url}" alt="Screenshot preview">
+                            </div>
+                            <p>Size: ${data.metadata.file_size}</p>
+                            <p>Dimensions: ${data.metadata.width}x${data.metadata.height}</p>
+                        </div>`;
+                } else {
+                    feedback.innerHTML = `
+                        <div class="notice notice-error inline">
+                            <p>${data.message || 'Error taking screenshot'}</p>
+                        </div>`;
+                }
+            })
+            .catch(error => {
+                console.error('Screenshot error:', error);
+                feedback.innerHTML = `
+                    <div class="notice notice-error inline">
+                        <p>Error taking screenshot: ${error.message}</p>
+                    </div>`;
+            })
+            .finally(() => {
+                spinner.style.visibility = 'hidden';
+                screenshotButton.disabled = false;
+            });
+        });
+    }
+
+    // Add new tab navigation functionality
+    const initTabNavigation = () => {
+        const tabs = document.querySelectorAll('.sewn-admin-tab');
+        const savedTab = localStorage.getItem('sewn_active_tab');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                const tabId = this.dataset.tab;
+                
+                // Update active states
+                document.querySelectorAll('.sewn-admin-tab').forEach(t => 
+                    t.classList.remove('active'));
+                document.querySelectorAll('.sewn-tab-content').forEach(c => 
+                    c.classList.remove('active'));
+                
+                this.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+                
+                // Save active tab
+                localStorage.setItem('sewn_active_tab', tabId);
+                
+                // Update URL without reload
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('tab', tabId);
+                window.history.pushState({}, '', newUrl);
+            });
+        });
+        
+        // Activate saved tab or first tab
+        if (savedTab) {
+            const savedTabElement = document.querySelector(`[data-tab="${savedTab}"]`);
+            if (savedTabElement) savedTabElement.click();
+        } else if (tabs.length) {
+            tabs[0].click();
+        }
+    };
+
+    // Add installation progress refresh
+    const initInstallationProgress = () => {
+        const progressTable = document.querySelector('.sewn-installation-table-wrapper');
+        if (!progressTable) return;
+
+        const refreshProgress = async () => {
+            try {
+                const response = await fetch(ajaxurl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        action: 'sewn_refresh_installation_progress',
+                        nonce: sewn_settings.nonce
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    progressTable.innerHTML = data.data.html;
+                }
+            } catch (error) {
+                console.error('Failed to refresh installation progress:', error);
+            }
         };
 
-        if (!url) {
-            resultDiv.html('<div class="notice notice-error"><p>Please enter a URL to test.</p></div>');
-            return;
-        }
-
-        // Validate URL format
-        if (!url.match(/^https?:\/\//i)) {
-            url = 'https://' + url;
-            $('#sewn-test-url').val(url);
-        }
-
-        button.prop('disabled', true);
-        resultDiv.html(loadingHtml);
-
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'sewn_test_screenshot',
-                url: url,
-                nonce: sewn_settings.nonce,
-                width: options.width,
-                height: options.height,
-                quality: options.quality
-            },
-            success: function(response) {
-                if (response.success) {
-                    var successHtml = '<div class="notice notice-success">' +
-                        '<p>Screenshot taken successfully!</p>' +
-                        '<p>Method used: ' + response.data.method + '</p>' +
-                        '<div class="screenshot-preview">' +
-                        '<img src="' + response.data.url + '" alt="Screenshot preview">' +
-                        '<div class="screenshot-actions">' +
-                        '<a href="' + response.data.url + '" class="button" download>Download</a>' +
-                        '<button type="button" class="button retry-screenshot">Take Another</button>' +
-                        '</div></div></div>';
-                        
-                    resultDiv.html(successHtml);
-                } else {
-                    resultDiv.html('<div class="notice notice-error">' +
-                        '<p>Error: ' + response.data + '</p>' +
-                        '<button type="button" class="button retry-screenshot">Try Again</button>' +
-                        '</div>');
-                }
-            },
-            error: function(xhr, status, error) {
-                resultDiv.html('<div class="notice notice-error">' +
-                    '<p>Request failed: ' + error + '</p>' +
-                    '<p>Status: ' + status + '</p>' +
-                    '<button type="button" class="button retry-screenshot">Try Again</button>' +
-                    '</div>');
-                console.error('AJAX Error:', status, error);
-            },
-            complete: function() {
-                button.prop('disabled', false);
+        // Refresh every 30 seconds if installation tab is active
+        setInterval(() => {
+            if (document.getElementById('sewn-tab-installation').classList.contains('active')) {
+                refreshProgress();
             }
-        });
-    });
+        }, 30000);
+    };
 
-    // Add retry button handler
-    $(document).on('click', '.retry-screenshot', function() {
-        $('#sewn-test-button').click();
-    });
-
-    // Add reset button handler
-    $(document).on('click', '.reset-options', function() {
-        $('#sewn-test-width').val(1280);
-        $('#sewn-test-height').val(800);
-        $('#sewn-test-quality').val(85);
-    });
-
-    // Add input validation
-    $('.sewn-test-options input[type="number"]').on('change', function() {
-        var min = parseInt($(this).attr('min'));
-        var max = parseInt($(this).attr('max'));
-        var value = parseInt($(this).val());
-
-        if (value < min) $(this).val(min);
-        if (value > max) $(this).val(max);
-    });
-
-    // API Key Management
-    $('.regenerate-api-key').on('click', function() {
-        var button = $(this);
-        var serviceId = button.data('service');
-        var keyInput = $('#sewn_' + serviceId + '_key');
-        var feedbackDiv = button.siblings('.api-feedback');
-        
-        button.prop('disabled', true);
-        
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'sewn_regenerate_api_key',
-                service: serviceId,
-                nonce: sewn_settings.nonce
-            },
-            beforeSend: function() {
-                feedbackDiv.html('<span class="spinner is-active"></span>');
-            },
-            success: function(response) {
-                if (response.success) {
-                    keyInput.val(response.data.key);
-                    feedbackDiv.html('<div class="notice notice-success inline"><p>' + 
-                        response.data.message + '</p></div>');
-                    
-                    // Update any UI elements showing the key
-                    $('.api-key-display[data-service="' + serviceId + '"]').text(response.data.key);
-                } else {
-                    feedbackDiv.html('<div class="notice notice-error inline"><p>' + 
-                        response.data + '</p></div>');
-                }
-            },
-            error: function(xhr, status, error) {
-                feedbackDiv.html('<div class="notice notice-error inline"><p>Failed to regenerate key: ' + 
-                    error + '</p></div>');
-            },
-            complete: function() {
-                button.prop('disabled', false);
-                setTimeout(function() {
-                    feedbackDiv.empty();
-                }, 5000);
-            }
-        });
-    });
-
-    // Log UI action
-    function logUIAction(action, data) {
-        $.ajax({
-            url: ajaxurl,
-            method: 'POST',
-            data: {
-                action: 'sewn_log_ui_action',
-                nonce: sewnSettings.nonce,
-                log_data: {
-                    action: action,
-                    data: data,
-                    timestamp: Date.now()
-                }
-            }
-        });
-    }
-
-    // Log API key visibility toggle
-    $('.sewn-toggle-visibility').on('click', function() {
-        var targetId = $(this).data('target');
-        var isVisible = $('#' + targetId).attr('type') === 'text';
-        logUIAction('api_key_visibility_toggle', {
-            target: targetId,
-            visible: isVisible
-        });
-    });
-
-    // Log API test
-    $('.sewn-test-api').on('click', function() {
-        var service = $(this).data('service');
-        logUIAction('api_test_started', {
-            service: service
-        });
-    });
-
-    // Log API key regeneration
-    $('.regenerate-api-key').on('click', function() {
-        var service = $(this).data('service');
-        logUIAction('api_key_regeneration_started', {
-            service: service
-        });
-    });
-
-    // Add test runner functionality
-    $('#sewn-run-all-tests').on('click', function(e) {
-        e.preventDefault();
-        const button = $(this);
-        const testLog = $('#test-log');
-        const nonce = button.data('nonce');
-
-        button.prop('disabled', true);
-        testLog.html('<div class="notice notice-info"><p>Running tests...</p></div>');
-
-        const startTime = performance.now();
-
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'sewn_run_all_tests',
-                nonce: nonce
-            },
-            success: function(response) {
-                const executionTime = performance.now() - startTime;
-                console.log('testExecution:', executionTime, 'ms');
-
-                if (response.success) {
-                    const results = response.data;
-                    displayTestResults(results, testLog);
-                } else {
-                    testLog.html('<div class="notice notice-error"><p>Test execution failed: ' + 
-                        (response.data || 'Unknown error') + '</p></div>');
-                }
-            },
-            error: function(xhr, status, error) {
-                testLog.html('<div class="notice notice-error"><p>Request failed: ' + error + '</p></div>');
-            },
-            complete: function() {
-                button.prop('disabled', false);
-            }
-        });
-    });
-
-    function displayTestResults(results, container) {
-        let html = '<div class="sewn-test-results">';
-        let totalTests = 0;
-        let passedTests = 0;
-
-        // Loop through each test category
-        Object.entries(results).forEach(([testName, result]) => {
-            const statusClass = result.success ? 'pass' : 'fail';
-            if (result.success) passedTests++;
-            totalTests++;
-
-            html += `
-                <div class="test-result ${statusClass}">
-                    <h4>${formatTestName(testName)}</h4>
-                    <div class="test-details">`;
-
-            if (result.assertions) {
-                html += '<ul class="assertions-list">';
-                result.assertions.forEach(assertion => {
-                    html += `<li class="${assertion.result ? 'pass' : 'fail'}">
-                        ${assertion.message}
-                    </li>`;
-                });
-                html += '</ul>';
-            }
-
-            if (result.details) {
-                html += `
-                    <div class="test-details-extra">
-                        <h5>Additional Details:</h5>
-                        <pre>${JSON.stringify(result.details, null, 2)}</pre>
-                    </div>`;
-            }
-
-            html += '</div></div>';
-        });
-
-        // Add summary
-        html += `
-            <div class="test-summary">
-                <h4>Test Summary</h4>
-                <p>Total Tests: ${totalTests}</p>
-                <p>Passed: ${passedTests}</p>
-                <p>Failed: ${totalTests - passedTests}</p>
-            </div>
-        </div>`;
-
-        container.html(html);
-    }
-
-    function formatTestName(name) {
-        return name
-            .split('-')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-    }
+    // Initialize new functionality
+    initTabNavigation();
+    initInstallationProgress();
 }); 

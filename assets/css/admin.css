@@ -520,12 +520,12 @@
 }
 
 /* Activity List */
-.activity-list {
+.sewn-card .activity-list {
     display: grid;
     gap: 10px;
 }
 
-.activity-item {
+.sewn-card .activity-item {
     display: grid;
     grid-template-columns: auto 1fr auto auto;
     gap: 10px;
@@ -536,27 +536,27 @@
     font-size: 13px;
 }
 
-.activity-item.success {
+.sewn-card .activity-item.success {
     border-left: 3px solid #00a32a;
 }
 
-.activity-item.failed {
+.sewn-card .activity-item.failed {
     border-left: 3px solid #cc1818;
 }
 
-.activity-time {
+.sewn-card .activity-time {
     color: #646970;
 }
 
-.activity-status {
+.sewn-card .activity-status {
     font-weight: 500;
 }
 
-.activity-status.success {
+.sewn-card .activity-status.success {
     color: #00a32a;
 }
 
-.activity-status.failed {
+.sewn-card .activity-status.failed {
     color: #cc1818;
 }
 
@@ -602,4 +602,840 @@
 
 .spinner.is-active {
     visibility: visible;
+}
+
+.sewn-wkhtmltopdf-settings {
+    margin: 1em 0;
+}
+
+.sewn-wkhtmltopdf-status {
+    margin: 1em 0;
+}
+
+.sewn-wkhtmltopdf-status .notice {
+    margin: 5px 0;
+    padding: 8px 12px;
+}
+
+.sewn-wkhtmltopdf-status .dashicons {
+    margin-right: 5px;
+}
+
+.sewn-wkhtmltopdf-status code {
+    background: rgba(0,0,0,0.07);
+    padding: 2px 5px;
+}
+
+.sewn-custom-path-status {
+    margin-top: 8px;
+}
+
+.sewn-custom-path-status .description {
+    display: flex;
+    align-items: center;
+    margin: 5px 0;
+}
+
+.sewn-custom-path-status .dashicons {
+    margin-right: 5px;
+}
+
+.sewn-custom-path-status .success {
+    color: #46b450;
+}
+
+.sewn-custom-path-status .error {
+    color: #dc3232;
+}
+
+.sewn-wkhtmltopdf-status .paths-list {
+    margin-top: 8px;
+    margin-left: 20px;
+}
+
+.sewn-wkhtmltopdf-status .paths-list code {
+    display: block;
+    margin: 4px 0;
+    padding: 4px 8px;
+    background: rgba(0,0,0,0.07);
+    font-size: 12px;
+}
+
+/* Carousel Styles */
+.sewn-screenshots-gallery {
+    margin-top: 20px;
+}
+
+.sewn-carousel-container {
+    position: relative;
+    overflow: hidden;
+    padding: 0 40px;
+}
+
+.sewn-carousel {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 10px 0;
+}
+
+.sewn-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+.sewn-carousel-item {
+    flex: 0 0 200px;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.sewn-carousel-item:hover {
+    transform: translateY(-5px);
+}
+
+.sewn-carousel-item img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.sewn-carousel-item-date {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 0 0 4px 4px;
+}
+
+.sewn-carousel-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.sewn-carousel-nav.prev {
+    left: 5px;
+}
+
+.sewn-carousel-nav.next {
+    right: 5px;
+}
+
+/* Modal Styles */
+.sewn-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 160000;
+}
+
+.sewn-modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    padding: 20px;
+    border-radius: 4px;
+    max-width: 90%;
+    max-height: 90%;
+    overflow: auto;
+}
+
+.sewn-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.sewn-modal-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.sewn-modal-body img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Copy URL notification */
+.sewn-copy-notification {
+    position: fixed;
+    top: 50px;
+    right: 20px;
+    background: #2271b1;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    z-index: 160001;
+    animation: fadeInOut 2s ease-in-out;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(-20px); }
+    20% { opacity: 1; transform: translateY(0); }
+    80% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-20px); }
+}
+
+/* Carousel Styles */
+.screenshots-carousel-wrapper {
+    position: relative;
+    overflow: hidden;
+    margin: 20px 0;
+}
+
+.screenshots-carousel.horizontal {
+    display: flex;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+.screenshots-carousel.horizontal::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.screenshot-item {
+    flex: 0 0 auto;
+    margin-right: 15px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.screenshot-item:hover {
+    transform: translateY(-5px);
+}
+
+.screenshot-thumbnail {
+    width: 200px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+/* Modal Styles */
+.sewn-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 100000;
+}
+
+.sewn-modal-content {
+    position: relative;
+    width: 90%;
+    max-width: 1200px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.sewn-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.sewn-modal-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.sewn-modal-body {
+    padding: 20px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.full-screenshot {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Copy URL Notification */
+.copy-notification {
+    position: fixed;
+    top: 50px;
+    right: 20px;
+    background: #2271b1;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 4px;
+    display: none;
+    z-index: 100001;
+}
+
+/* Carousel Container Styles */
+.sewn-card.screenshots-card {
+    grid-column: span 2; /* Make card span 2 columns */
+    position: relative;
+}
+
+.screenshots-carousel-wrapper {
+    position: relative;
+    overflow: hidden;
+    margin: 20px 0;
+    padding: 0 40px; /* Make room for arrows */
+}
+
+/* Navigation Arrows */
+.carousel-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.carousel-arrow:hover {
+    background: #f0f0f0;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.carousel-arrow.prev {
+    left: 5px;
+}
+
+.carousel-arrow.next {
+    right: 5px;
+}
+
+/* Update Thumbnail Styles */
+.screenshot-item {
+    flex: 0 0 auto;
+    margin-right: 15px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.screenshot-thumbnail {
+    width: 200px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: box-shadow 0.2s;
+}
+
+.screenshot-item:hover .screenshot-thumbnail {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Screenshots Table Styles */
+.screenshots-table-wrapper {
+    margin-top: 20px;
+    border-top: 1px solid #ddd;
+    padding-top: 20px;
+}
+
+.screenshots-table {
+    margin-top: 10px;
+}
+
+.column-thumbnail {
+    width: 70px;
+}
+
+.column-service {
+    width: 150px;
+}
+
+.column-date {
+    width: 200px;
+}
+
+.column-actions {
+    width: 120px;
+    text-align: right;
+}
+
+.screenshot-mini-thumb {
+    width: 50px;
+    height: 50px;
+    border-radius: 4px;
+    object-fit: cover;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.screenshots-table .button {
+    padding: 0 8px;
+    height: 28px;
+    margin-left: 5px;
+}
+
+.screenshots-table .button .dashicons {
+    font-size: 16px;
+    height: 16px;
+    width: 16px;
+    line-height: 26px;
+}
+
+/* Action Button Styles */
+.screenshots-table .action-button {
+    padding: 0 8px;
+    height: 28px;
+    margin-left: 5px;
+    position: relative;
+}
+
+/* Tooltip Styles */
+.sewn-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 10px;
+    background: #23282d;
+    color: #fff;
+    font-size: 12px;
+    border-radius: 3px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    z-index: 100;
+}
+
+.sewn-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #23282d;
+}
+
+.action-button:hover .sewn-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Success Animation */
+.action-success {
+    animation: successPulse 0.5s ease-in-out;
+}
+
+@keyframes successPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* API Documentation Styles */
+.api-documentation {
+    margin-top: 30px;
+    padding: 30px;
+    background: #f8f9fa;
+    border: 1px solid #e2e4e7;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Code Styling - Consistent Dark Theme */
+.api-documentation code,
+.params-table code,
+.endpoint-url,
+.code-block pre {
+    font-family: 'Consolas', 'Monaco', 'Andale Mono', monospace;
+    background: #282c34;
+    color: #abb2bf;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    line-height: 1.4;
+}
+
+/* Large Code Blocks */
+.code-block {
+    position: relative;
+    margin: 15px 0;
+    background: #282c34;
+    border-radius: 6px;
+}
+
+.code-block pre {
+    padding: 20px;
+    margin: 0;
+    overflow-x: auto;
+    border-radius: 6px;
+}
+
+.code-block code {
+    padding: 0;
+    background: none;
+    display: block;
+}
+
+/* Copy Button Enhancement */
+.copy-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 4px;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.copy-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.copy-button .dashicons {
+    color: #fff;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* Method Badges */
+.method {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    min-width: 70px;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.method.get {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.method.post {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+/* API Endpoint Cards */
+.endpoint-card {
+    background: #fff;
+    border: 1px solid #e2e4e7;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.endpoint-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e2e4e7;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.endpoint-content {
+    padding: 20px;
+}
+
+/* Parameters Table */
+.params-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 15px 0;
+}
+
+.params-table th,
+.params-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e2e4e7;
+}
+
+.params-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+
+/* Service Configuration Styles */
+.sewn-services-status {
+    margin: 20px 0;
+}
+
+.sewn-services-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.sewn-service-selection {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.sewn-service-option {
+    display: block;
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid #f0f0f1;
+    background: #f8f9fa;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sewn-service-option:hover {
+    background: #f0f0f1;
+}
+
+.sewn-service-option input[type="radio"] {
+    margin-right: 10px;
+}
+
+.sewn-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-left: 10px;
+}
+
+.sewn-badge.primary {
+    background: #007cba;
+    color: #fff;
+}
+
+.sewn-badge.warning {
+    background: #f0b849;
+    color: #1e1e1e;
+}
+
+/* Fallback Service Styles */
+.sewn-fallback-service-config {
+    margin-top: 30px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.sewn-fallback-service-selection {
+    margin-bottom: 20px;
+}
+
+.sewn-fallback-service-details {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.sewn-fallback-service-details.active {
+    display: block;
+}
+
+.service-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.sewn-fallback-status {
+    margin: 20px 0;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 1px solid #e5e5e5;
+    border-radius: 4px;
+}
+
+/* Status Indicators */
+.sewn-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.sewn-status .dashicons {
+    margin-right: 4px;
+}
+
+.sewn-status.available {
+    background: #edfaef;
+    color: #1b7c2c;
+}
+
+.sewn-status.unavailable {
+    background: #fef8ee;
+    color: #b45d02;
+}
+
+/* Loading States */
+.sewn-test-fallback.loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+}
+
+.sewn-test-fallback.loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin: -8px 0 0 -8px;
+    border: 2px solid #ffffff;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+    .sewn-services-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .service-info {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+}
+
+/* Service Configuration Tabs */
+.sewn-screenshot-services-wrapper {
+    margin: 20px 0;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.sewn-service-tabs {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ccd0d4;
+}
+
+.sewn-tab-button {
+    padding: 10px 20px;
+    margin-right: 10px;
+    margin-bottom: -1px;
+    background: #f8f9fa;
+    border: 1px solid #ccd0d4;
+    border-bottom: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sewn-tab-button:hover {
+    background: #fff;
+}
+
+.sewn-tab-button.active {
+    background: #fff;
+    border-bottom: 1px solid #fff;
+    margin-bottom: -1px;
+}
+
+.sewn-tab-button .dashicons {
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+.sewn-service-description {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-left: 4px solid #007cba;
+}
+
+.sewn-service-description a {
+    margin-left: 10px;
+    text-decoration: none;
+}
+
+.sewn-service-description .dashicons-external {
+    font-size: 16px;
+    vertical-align: middle;
+}
+
+.sewn-service-status-summary {
+    margin-top: 30px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.sewn-service-status-summary .notice {
+    margin: 10px 0;
+}
+
+.sewn-service-status-summary .dashicons {
+    margin-right: 5px;
+    vertical-align: middle;
 }

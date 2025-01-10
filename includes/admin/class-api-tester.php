@@ -2,10 +2,12 @@
 class SEWN_API_Tester {
     private $logger;
     private $settings;
+    private $screenshot_service;
 
-    public function __construct($logger, $settings) {
+    public function __construct($logger, $settings, $screenshot_service) {
         $this->logger = $logger;
         $this->settings = $settings;
+        $this->screenshot_service = $screenshot_service;
         
         // Add AJAX handler
         add_action('wp_ajax_sewn_test_screenshot', [$this, 'handle_test_request']);
@@ -13,19 +15,11 @@ class SEWN_API_Tester {
     }
 
     public function enqueue_scripts($hook) {
+        // Only load on API tester page
         if (strpos($hook, 'sewn-screenshots') === false) {
             return;
         }
 
-        // Enqueue the main admin CSS
-        wp_enqueue_style(
-            'sewn-admin-style',
-            SEWN_SCREENSHOTS_URL . 'assets/css/admin.css',
-            [],
-            SEWN_SCREENSHOTS_VERSION
-        );
-
-        // Enqueue the API tester script
         wp_enqueue_script(
             'sewn-api-tester-enhanced',
             SEWN_SCREENSHOTS_URL . 'assets/js/api-tester-enhanced.js',
@@ -34,26 +28,24 @@ class SEWN_API_Tester {
             true
         );
 
-        // Add all required configuration parameters
-        wp_localize_script('sewn-api-tester-enhanced', 'sewnApiTester', [
-            'restUrl' => trailingslashit(rest_url()),
-            'apiBase' => 'sewn-screenshots/v1',
-            'nonce' => wp_create_nonce('wp_rest'),
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'homeUrl' => home_url(),
-            'debug' => WP_DEBUG,
-            'version' => SEWN_SCREENSHOTS_VERSION,
-            'endpoints' => [
-                'screenshot' => 'screenshot',
-                'preview' => 'preview/screenshot',
-                'status' => 'status',
-                'cache' => 'cache/purge'
-            ],
-            'headers' => [
-                'X-WP-Nonce' => wp_create_nonce('wp_rest'),
-                'Content-Type' => 'application/json'
-            ]
-        ]);
+        wp_localize_script(
+            'sewn-api-tester-enhanced',
+            'sewnApiTesterData',
+            array(
+                'rest_url' => rest_url('sewn-screenshots/v1/screenshot'),
+                'rest_nonce' => wp_create_nonce('wp_rest'),
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('sewn_api_test'),
+                'plugin_url' => SEWN_SCREENSHOTS_URL,
+                'debug' => defined('WP_DEBUG') && WP_DEBUG,
+                'strings' => array(
+                    'generating' => __('Generating...', 'startempire-wire-network-screenshots'),
+                    'success' => __('Screenshot taken successfully', 'startempire-wire-network-screenshots'),
+                    'error' => __('Error taking screenshot', 'startempire-wire-network-screenshots'),
+                    'permission_denied' => __('Permission denied. Please verify you are logged in and try again.', 'startempire-wire-network-screenshots')
+                )
+            )
+        );
     }
 
     public function render_test_interface() {
@@ -131,6 +123,7 @@ class SEWN_API_Tester {
                         <div id="test-results" class="sewn-api-test-results">
                             <div class="no-results"><?php _e('No tests run yet', 'startempire-wire-network-screenshots'); ?></div>
                         </div>
+                        <button href="<?php echo admin_url('admin.php?page=sewn-screenshots'); ?>" class="button button-primary" id="return-to-dashboard">Return to Dashboard</button>
                     </div>
                 </div>
             </div>
@@ -146,156 +139,118 @@ class SEWN_API_Tester {
     }
 
     public function handle_test_request() {
-        $this->logger->debug('=== Starting Screenshot Test Request ===', [
-            'timestamp' => current_time('mysql'),
-            'post_data' => $_POST,
-            'server' => [
-                'REQUEST_METHOD' => $_SERVER['REQUEST_METHOD'],
-                'CONTENT_TYPE' => $_SERVER['CONTENT_TYPE'] ?? 'not set',
-                'HTTP_X_REQUESTED_WITH' => $_SERVER['HTTP_X_REQUESTED_WITH'] ?? 'not set'
-            ],
-            'memory_usage' => memory_get_usage(true),
-            'peak_memory' => memory_get_peak_usage(true)
+        $this->logger->debug('Handling test request', [
+            'post_data' => $_POST
         ]);
+        
+        check_ajax_referer('sewn_api_test', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('Permission denied', 'startempire-wire-network-screenshots')
+            ]);
+            return;
+        }
+
+        // Get and validate URL
+        $test_url = isset($_POST['test_url']) ? esc_url_raw($_POST['test_url']) : '';
+        if (empty($test_url)) {
+            wp_send_json_error([
+                'message' => __('Please provide a valid URL', 'startempire-wire-network-screenshots')
+            ]);
+            return;
+        }
 
         try {
-            // Verify nonce and capabilities
-            $nonce_check = check_ajax_referer('sewn_api_test', 'nonce', false);
-            $this->logger->debug('Nonce check', [
-                'result' => $nonce_check,
-                'provided_nonce' => $_POST['nonce'] ?? 'not set'
-            ]);
-
-            if (!$nonce_check) {
-                throw new Exception('Security check failed');
-            }
-
-            $can_manage = current_user_can('manage_options');
-            $this->logger->debug('Capability check', [
-                'can_manage_options' => $can_manage,
-                'current_user' => get_current_user_id()
-            ]);
-
-            if (!$can_manage) {
-                throw new Exception('Insufficient permissions');
-            }
-
-            // Get and validate test URL
-            $test_url = isset($_POST['test_url']) ? esc_url_raw($_POST['test_url']) : '';
-            $this->logger->debug('URL validation', [
-                'raw_url' => $_POST['test_url'] ?? 'not set',
-                'sanitized_url' => $test_url
-            ]);
-
-            if (empty($test_url)) {
-                throw new Exception('Please provide a valid URL');
-            }
-
-            // Get test options and validate
-            $options = isset($_POST['options']) ? (array)$_POST['options'] : [];
-            $this->logger->debug('Processing options', [
-                'received_options' => $_POST['options'] ?? [],
-                'processed_options' => $options
-            ]);
-
-            // Directory checks
-            $upload_dir = wp_upload_dir();
-            $screenshots_dir = $upload_dir['basedir'] . '/screenshots';
+            // Get and validate service configuration
+            $active_mode = get_option('sewn_active_api', 'primary');
+            $primary_key = get_option('sewn_api_key');
+            $primary_configured = get_option('sewn_primary_service_configured', false);
+            $fallback_key = get_option('sewn_fallback_api_key');
             
-            $this->logger->debug('Directory status', [
-                'upload_base' => $upload_dir['basedir'],
-                'screenshots_dir' => $screenshots_dir,
-                'exists' => file_exists($screenshots_dir),
-                'writable' => is_writable($screenshots_dir),
-                'permissions' => decoct(fileperms($screenshots_dir) & 0777),
-                'wp_content_permissions' => decoct(fileperms(WP_CONTENT_DIR) & 0777),
-                'process_user' => get_current_user(),
-                'process_uid' => getmyuid(),
-                'process_gid' => getmygid()
+            // Log service state
+            $this->logger->debug('Service state during test', [
+                'active_mode' => $active_mode,
+                'primary_configured' => $primary_configured,
+                'has_primary_key' => !empty($primary_key),
+                'has_fallback_key' => !empty($fallback_key)
             ]);
 
-            // Before screenshot attempt
-            $this->logger->debug('Pre-screenshot configuration', [
-                'bridge_class_exists' => class_exists('SEWN_Screenshot_Bridge'),
-                'settings' => $this->settings,
-                'memory_limit' => ini_get('memory_limit'),
-                'max_execution_time' => ini_get('max_execution_time'),
-                'temp_dir_writable' => is_writable(sys_get_temp_dir())
-            ]);
-
-            // Screenshot attempt
-            $screenshot_bridge = new SEWN_Screenshot_Bridge($this->logger);
-            $filename = 'screenshot-' . uniqid() . '.png';
-            
-            $result = $screenshot_bridge->take_screenshot($test_url, [
-                'width' => isset($options['width']) ? (int)$options['width'] : 1280,
-                'height' => isset($options['height']) ? (int)$options['height'] : 800,
-                'quality' => isset($options['quality']) ? (int)$options['quality'] : 85,
-                'filename' => $filename
-            ]);
-
-            $this->logger->debug('Screenshot attempt result', [
-                'result' => $result,
-                'file_exists' => isset($result['path']) ? file_exists($result['path']) : false,
-                'file_size' => isset($result['path']) ? filesize($result['path']) : 0,
-                'memory_usage' => memory_get_usage(true),
-                'peak_memory' => memory_get_peak_usage(true)
-            ]);
-
-            if (!$result || !isset($result['path'])) {
-                throw new Exception('Failed to capture screenshot: ' . ($result['error'] ?? 'Unknown error'));
+            // Determine which service to use
+            if ($active_mode === 'primary' && $primary_configured && !empty($primary_key)) {
+                $service = 'primary';
+                $api_key = $primary_key;
+                $this->logger->info('Using primary service for test');
+            } else if (!empty($fallback_key)) {
+                $service = get_option('sewn_fallback_service', 'screenshotmachine');
+                $api_key = $fallback_key;
+                $this->logger->info('Using fallback service for test', [
+                    'service' => $service
+                ]);
+            } else {
+                throw new Exception('No valid service configuration found');
             }
 
-            if (!file_exists($result['path'])) {
-                throw new Exception('Screenshot file not created: ' . $result['path']);
-            }
+            // Get screenshot options
+            $width = isset($_POST['options']['width']) ? intval($_POST['options']['width']) : 1280;
+            $height = isset($_POST['options']['height']) ? intval($_POST['options']['height']) : 800;
+            $quality = isset($_POST['options']['quality']) ? intval($_POST['options']['quality']) : 85;
 
-            // Get file details
-            $file_size = size_format(filesize($result['path']), 2);
-            $dimensions = getimagesize($result['path']);
-
-            if (!$dimensions) {
-                throw new Exception('Invalid image file created');
-            }
-
-            // Get the URL for the screenshot
-            $screenshot_url = str_replace(
-                $upload_dir['basedir'],
-                $upload_dir['baseurl'],
-                $result['path']
-            );
-
-            $response_data = [
-                'screenshot_url' => $screenshot_url,
-                'file_size' => $file_size,
-                'width' => $dimensions[0],
-                'height' => $dimensions[1],
-                'quality' => isset($options['quality']) ? $options['quality'] : 85
+            // Prepare REST API request
+            $request_url = rest_url('sewn-screenshots/v1/screenshot');
+            $request_args = [
+                'method' => 'POST',
+                'headers' => [
+                    'X-API-Key' => $api_key,
+                    'Content-Type' => 'application/json'
+                ],
+                'body' => json_encode([
+                    'url' => $test_url,
+                    'type' => 'test',
+                    'options' => [
+                        'width' => $width,
+                        'height' => $height,
+                        'quality' => $quality,
+                        'mode' => $service,
+                        'service' => $service
+                    ]
+                ])
             ];
 
-            $this->logger->debug('Sending success response', ['response' => $response_data]);
-            wp_send_json_success($response_data);
+            $this->logger->debug('Making screenshot request', [
+                'service' => $service,
+                'has_key' => !empty($api_key),
+                'options' => [
+                    'width' => $width,
+                    'height' => $height,
+                    'quality' => $quality
+                ]
+            ]);
+
+            // Make REST API request
+            $response = wp_remote_request($request_url, $request_args);
+
+            if (is_wp_error($response)) {
+                throw new Exception($response->get_error_message());
+            }
+
+            $body = json_decode(wp_remote_retrieve_body($response), true);
+            
+            if (!$body || isset($body['code'])) {
+                throw new Exception($body['message'] ?? 'Invalid response from API');
+            }
+
+            wp_send_json_success($body);
 
         } catch (Exception $e) {
             $this->logger->error('Screenshot test failed', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
-                'url' => isset($_POST['test_url']) ? $_POST['test_url'] : '',
-                'options' => isset($_POST['options']) ? $_POST['options'] : [],
-                'last_error' => error_get_last()
+                'trace' => $e->getTraceAsString()
             ]);
-
+            
             wp_send_json_error([
-                'error' => $e->getMessage(),
-                'details' => $this->logger->get_recent_logs(5)
+                'message' => $e->getMessage()
             ]);
         }
-    }
-
-    private function get_screenshot_url($file_path) {
-        $upload_dir = wp_upload_dir();
-        return str_replace($upload_dir['basedir'], $upload_dir['baseurl'], $file_path);
     }
 } 

@@ -68,7 +68,7 @@ class SEWN_Screenshot_Service {
         return false;
     }
 
-    public function take_screenshot($url, $options = []) {
+    public function take_screenshot($url, $type = 'full', $options = []) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'sewn_screenshots';
         $start_time = microtime(true);
@@ -77,7 +77,7 @@ class SEWN_Screenshot_Service {
             // Log the initial attempt
             $wpdb->insert($table_name, [
                 'url' => $url,
-                'type' => $options['type'] ?? 'full',
+                'type' => $type,
                 'status' => 'pending',
                 'created_at' => current_time('mysql')
             ]);
@@ -86,7 +86,10 @@ class SEWN_Screenshot_Service {
             $options = $this->validate_options($options);
             $output_file = $this->generate_file_path($url);
             
-            if ($this->wkhtmltoimage_path) {
+            // Check for API key first
+            if (!empty($options['api_key'])) {
+                $result = $this->take_screenshot_with_api($url, $output_file, $options);
+            } else if ($this->wkhtmltoimage_path) {
                 $result = $this->take_screenshot_with_wkhtmltoimage($url, $output_file, $options);
             } else {
                 $result = $this->take_screenshot_with_fallback($url, $output_file, $options);
@@ -101,12 +104,22 @@ class SEWN_Screenshot_Service {
                     'processing_time' => $processing_time,
                     'screenshot_path' => $output_file,
                     'file_size' => filesize($output_file),
-                    'updated_at' => current_time('mysql')
+                    'updated_at' => current_time('mysql'),
+                    'type' => $type
                 ],
                 ['id' => $screenshot_id]
             );
             
-            return $result;
+            $this->logger->debug('Screenshot taken successfully', [
+                'url' => $url,
+                'result' => $result
+            ]);
+            
+            return array_merge($result, [
+                'type' => $type,
+                'url' => $this->get_screenshot_url($output_file),
+                'size' => filesize($output_file)
+            ]);
             
         } catch (Exception $e) {
             // Log the failure
@@ -122,6 +135,11 @@ class SEWN_Screenshot_Service {
                     ['id' => $screenshot_id]
                 );
             }
+            
+            $this->logger->error('Screenshot failed', [
+                'url' => $url,
+                'error' => $e->getMessage()
+            ]);
             
             throw $e;
         }
@@ -233,5 +251,68 @@ class SEWN_Screenshot_Service {
     public function is_local_enabled() {
         $path = get_option('sewn_wkhtmltopdf_path', '');
         return !empty($path) && file_exists($path);
+    }
+
+    private function take_screenshot_with_api($url, $output_file, $options) {
+        // Implementation for primary API service
+        $api_key = $options['api_key'];
+        
+        // Make API request
+        $response = wp_remote_post('https://api.screenshots.com/v1/take', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type' => 'application/json'
+            ],
+            'body' => json_encode([
+                'url' => $url,
+                'width' => $options['width'],
+                'height' => $options['height'],
+                'quality' => $options['quality']
+            ])
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('API request failed: ' . $response->get_error_message());
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+
+        if (empty($data['screenshot_url'])) {
+            throw new Exception('No screenshot URL in API response');
+        }
+
+        // Download the screenshot
+        $image_response = wp_remote_get($data['screenshot_url']);
+        if (is_wp_error($image_response)) {
+            throw new Exception('Failed to download screenshot: ' . $image_response->get_error_message());
+        }
+
+        $image_data = wp_remote_retrieve_body($image_response);
+        if (!file_put_contents($output_file, $image_data)) {
+            throw new Exception('Failed to save screenshot file');
+        }
+
+        return [
+            'success' => true,
+            'method' => 'api',
+            'timestamp' => current_time('mysql')
+        ];
+    }
+
+    public function get_screenshot_url($file_path) {
+        $this->logger->debug('Getting screenshot URL', [
+            'file_path' => $file_path
+        ]);
+        
+        $upload_dir = wp_upload_dir();
+        $url = str_replace($upload_dir['basedir'], $upload_dir['baseurl'], $file_path);
+        
+        $this->logger->debug('Generated screenshot URL', [
+            'file_path' => $file_path,
+            'url' => $url
+        ]);
+        
+        return $url;
     }
 } 

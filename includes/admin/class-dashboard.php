@@ -17,6 +17,11 @@ class SEWN_Dashboard {
         
         // Ensure the screenshots table exists
         add_action('admin_init', [$this, 'create_screenshots_table']);
+
+        add_action('wp_ajax_sewn_delete_screenshot', [$this, 'handle_delete_screenshot']);
+
+        // Register carousel assets
+        add_action('admin_enqueue_scripts', [$this, 'register_carousel_assets']);
     }
 
     public function enqueue_admin_scripts($hook) {
@@ -176,6 +181,10 @@ class SEWN_Dashboard {
                             <?php endforeach; ?>
                         </div>
                     </div>
+
+                    <!-- Recent Screenshots -->
+                    <?php $this->logger->debug('Rendering recent screenshots section'); ?>
+                    <?php $this->render_screenshots_carousel(); ?>
                 </div>
             </div>
             <?php
@@ -338,6 +347,8 @@ class SEWN_Dashboard {
                 processing_time float DEFAULT 0,
                 error_message text DEFAULT NULL,
                 screenshot_path varchar(255) DEFAULT NULL,
+                thumbnail_path varchar(255) DEFAULT NULL,
+                image_path varchar(255) DEFAULT NULL,
                 file_size bigint(20) DEFAULT 0,
                 cached tinyint(1) DEFAULT 0,
                 created_at datetime DEFAULT CURRENT_TIMESTAMP,
@@ -365,6 +376,8 @@ class SEWN_Dashboard {
             'processing_time' => "ADD COLUMN processing_time float DEFAULT 0",
             'file_size' => "ADD COLUMN file_size bigint(20) DEFAULT 0",
             'screenshot_path' => "ADD COLUMN screenshot_path varchar(255) DEFAULT NULL",
+            'thumbnail_path' => "ADD COLUMN thumbnail_path varchar(255) DEFAULT NULL",
+            'image_path' => "ADD COLUMN image_path varchar(255) DEFAULT NULL",
             'type' => "ADD COLUMN type varchar(50) NOT NULL DEFAULT 'full'",
             'status' => "ADD COLUMN status varchar(20) NOT NULL DEFAULT 'pending'"
         ];
@@ -585,17 +598,18 @@ class SEWN_Dashboard {
     private function get_api_key_status() {
         $api_key = get_option('sewn_api_key', '');
         $fallback_key = get_option('sewn_fallback_api_key', '');
+        $active_mode = $this->api_manager->get_active_api_mode();
         
         return [
             'primary_key' => [
                 'exists' => !empty($api_key),
                 'last_used' => get_option('sewn_api_key_last_used', ''),
-                'status' => $this->api_manager->verify_api_key($api_key) ? 'active' : 'inactive'
+                'status' => ($active_mode === 'primary' && $this->api_manager->verify_api_key($api_key)) ? 'active' : 'inactive'
             ],
             'fallback_key' => [
                 'exists' => !empty($fallback_key),
                 'provider' => get_option('sewn_fallback_service', 'none'),
-                'status' => $this->api_manager->verify_fallback_key($fallback_key) ? 'active' : 'inactive'
+                'status' => ($active_mode === 'fallback' && $this->api_manager->verify_fallback_key($fallback_key)) ? 'active' : 'inactive'
             ]
         ];
     }
@@ -659,5 +673,304 @@ class SEWN_Dashboard {
             ]);
             return [];
         }
+    }
+
+    private function get_recent_screenshots_gallery() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'sewn_screenshots';
+        
+        $screenshots = $wpdb->get_results(
+            "SELECT * FROM {$table_name} 
+             WHERE status = 'success' 
+             AND thumbnail_path IS NOT NULL 
+             ORDER BY created_at DESC 
+             LIMIT 50"
+        );
+
+        return array_map(function($screenshot) {
+            return [
+                'id' => $screenshot->id,
+                'url' => $screenshot->url,
+                'thumbnail_url' => plugin_dir_url(SEWN_SCREENSHOTS_FILE) . 'screenshots/' . basename($screenshot->thumbnail_path),
+                'full_image_url' => plugin_dir_url(SEWN_SCREENSHOTS_FILE) . 'screenshots/' . basename($screenshot->image_path),
+                'created_at' => $screenshot->created_at
+            ];
+        }, $screenshots);
+    }
+
+    public function render_screenshots_carousel() {
+        try {
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'sewn_screenshots';
+
+            // Get total count
+            $total_screenshots = $wpdb->get_var("SELECT COUNT(*) FROM {$table_name}");
+            
+            // Get screenshots with service info
+            $screenshots = $wpdb->get_results("
+                SELECT * FROM {$table_name} 
+                WHERE screenshot_path IS NOT NULL 
+                ORDER BY created_at DESC 
+                LIMIT 50
+            ");
+
+            if (empty($screenshots)) {
+                echo '<div class="notice notice-info"><p>No screenshots available yet.</p></div>';
+                return;
+            }
+
+            ?>
+            <div class="sewn-card screenshots-card" id="sewn-screenshots-widget">
+                <h2>Recent Screenshots (<?php echo number_format($total_screenshots); ?> Total)</h2>
+                <div class="screenshots-carousel-wrapper" 
+                     data-total="<?php echo esc_attr($total_screenshots); ?>"
+                     data-page="1">
+                    <button class="carousel-arrow prev" type="button">
+                        <span class="dashicons dashicons-arrow-left-alt2"></span>
+                    </button>
+                    
+                    <div class="screenshots-carousel horizontal" data-infinite="true">
+                        <?php foreach ($screenshots as $screenshot): 
+                            $file_path = $screenshot->screenshot_path;
+                            $file_exists = file_exists($file_path);
+                            
+                            if (!$file_exists) {
+                                continue;
+                            }
+
+                            $thumbnail_url = $this->get_screenshot_url($file_path);
+                            $full_image_url = $this->get_screenshot_url($file_path);
+                        ?>
+                            <div class="screenshot-item" 
+                                 data-id="<?php echo esc_attr($screenshot->id); ?>"
+                                 data-url="<?php echo esc_url($screenshot->url); ?>"
+                                 data-image="<?php echo esc_url($full_image_url); ?>">
+                                <img src="<?php echo esc_url($thumbnail_url); ?>" 
+                                     alt="Screenshot of <?php echo esc_attr($screenshot->url); ?>"
+                                     class="screenshot-thumbnail"
+                                     loading="lazy">
+                                <div class="screenshot-meta">
+                                    <span class="screenshot-date">
+                                        <?php echo human_time_diff(strtotime($screenshot->created_at), current_time('timestamp')); ?> ago
+                                    </span>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <button class="carousel-arrow next" type="button">
+                        <span class="dashicons dashicons-arrow-right-alt2"></span>
+                    </button>
+                </div>
+
+                <!-- Screenshots Table -->
+                <div class="screenshots-table-wrapper">
+                    <table class="wp-list-table widefat fixed striped screenshots-table">
+                        <thead>
+                            <tr>
+                                <th class="column-thumbnail">Preview</th>
+                                <th class="column-service">Service</th>
+                                <th class="column-date">Date Created</th>
+                                <th class="column-actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($screenshots as $screenshot): 
+                                $thumbnail_url = $this->get_screenshot_url($screenshot->screenshot_path);
+                                $service = !empty($screenshot->service) ? $screenshot->service : 'Local';
+                                $date = human_time_diff(strtotime($screenshot->created_at), current_time('timestamp')) . ' ago';
+                            ?>
+                                <tr data-id="<?php echo esc_attr($screenshot->id); ?>">
+                                    <td class="column-thumbnail">
+                                        <img src="<?php echo esc_url($thumbnail_url); ?>" 
+                                             alt="Thumbnail" 
+                                             width="30" 
+                                             height="30"
+                                             class="screenshot-mini-thumb">
+                                    </td>
+                                    <td class="column-service">
+                                        <?php echo esc_html($service); ?>
+                                    </td>
+                                    <td class="column-date">
+                                        <?php echo esc_html($date); ?>
+                                    </td>
+                                    <td class="column-actions">
+                                        <button class="button button-small action-button copy-url" 
+                                                data-url="<?php echo esc_url($screenshot->url); ?>"
+                                                title="Copy URL">
+                                            <span class="dashicons dashicons-admin-links"></span>
+                                            <span class="sewn-tooltip">Copy screenshot URL</span>
+                                        </button>
+                                        <button class="button button-small action-button view-screenshot"
+                                                data-image="<?php echo esc_url($this->get_screenshot_url($screenshot->screenshot_path)); ?>"
+                                                title="View">
+                                            <span class="dashicons dashicons-visibility"></span>
+                                            <span class="sewn-tooltip">View full screenshot</span>
+                                        </button>
+                                        <button class="button button-small action-button delete-screenshot"
+                                                data-id="<?php echo esc_attr($screenshot->id); ?>"
+                                                title="Delete">
+                                            <span class="dashicons dashicons-trash"></span>
+                                            <span class="sewn-tooltip">Delete screenshot</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Screenshots Modal -->
+                <div id="screenshot-modal" class="sewn-modal">
+                    <div class="sewn-modal-content">
+                        <div class="sewn-modal-header">
+                            <h3>Screenshot Preview</h3>
+                            <div class="sewn-modal-actions">
+                                <button class="button copy-url" title="Copy URL">
+                                    <span class="dashicons dashicons-admin-links"></span>
+                                </button>
+                                <button class="button delete-screenshot" title="Delete">
+                                    <span class="dashicons dashicons-trash"></span>
+                                </button>
+                                <button class="button close-modal" title="Close">
+                                    <span class="dashicons dashicons-no"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="sewn-modal-body">
+                            <img src="" alt="Full Screenshot" class="full-screenshot">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php
+
+        } catch (Exception $e) {
+            $this->logger->error('Failed to render screenshots carousel', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    private function get_screenshot_url($file_path) {
+        if (empty($file_path)) {
+            $this->logger->warning('Empty file path provided to get_screenshot_url');
+            return '';
+        }
+
+        $upload_dir = wp_upload_dir();
+        $base_path = $upload_dir['basedir'];
+        $base_url = $upload_dir['baseurl'];
+        
+        // Check if file is in uploads directory
+        if (strpos($file_path, $base_path) === false) {
+            // If not, check if it's in the plugin's screenshots directory
+            $screenshots_dir = SEWN_SCREENSHOTS_PATH . 'screenshots';
+            $screenshots_url = SEWN_SCREENSHOTS_URL . 'screenshots';
+            $url = str_replace($screenshots_dir, $screenshots_url, $file_path);
+        } else {
+            $url = str_replace($base_path, $base_url, $file_path);
+        }
+        
+        $this->logger->debug('URL conversion', [
+            'file_path' => $file_path,
+            'base_path' => $base_path,
+            'base_url' => $base_url,
+            'resulting_url' => $url
+        ]);
+        
+        return $url;
+    }
+
+    public function handle_delete_screenshot() {
+        try {
+            check_ajax_referer('sewn_api_management', 'nonce');
+            
+            if (!current_user_can('manage_options')) {
+                throw new Exception('Insufficient permissions');
+            }
+
+            $screenshot_id = intval($_POST['screenshot_id']);
+            
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'sewn_screenshots';
+            
+            // Get screenshot info before deletion
+            $screenshot = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$table_name} WHERE id = %d",
+                $screenshot_id
+            ));
+
+            if (!$screenshot) {
+                throw new Exception('Screenshot not found');
+            }
+
+            // Delete physical files
+            if (!empty($screenshot->screenshot_path) && file_exists($screenshot->screenshot_path)) {
+                unlink($screenshot->screenshot_path);
+            }
+            if (!empty($screenshot->thumbnail_path) && file_exists($screenshot->thumbnail_path)) {
+                unlink($screenshot->thumbnail_path);
+            }
+
+            // Delete database record
+            $result = $wpdb->delete($table_name, ['id' => $screenshot_id], ['%d']);
+
+            if ($result === false) {
+                throw new Exception('Failed to delete database record');
+            }
+
+            // Log deletion
+            $this->logger->info('Screenshot deleted', [
+                'screenshot_id' => $screenshot_id,
+                'url' => $screenshot->url,
+                'user_id' => get_current_user_id()
+            ]);
+
+            wp_send_json_success([
+                'message' => 'Screenshot deleted successfully',
+                'id' => $screenshot_id
+            ]);
+
+        } catch (Exception $e) {
+            $this->logger->error('Screenshot deletion failed', [
+                'error' => $e->getMessage(),
+                'screenshot_id' => $screenshot_id ?? null
+            ]);
+            
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function register_carousel_assets() {
+        // Register styles
+        wp_register_style(
+            'sewn-dashboard-carousel',
+            SEWN_SCREENSHOTS_URL . 'assets/css/admin.css',
+            [],
+            SEWN_SCREENSHOTS_VERSION
+        );
+
+        // Register scripts with proper dependencies
+        wp_register_script(
+            'sewn-dashboard-carousel',
+            SEWN_SCREENSHOTS_URL . 'assets/js/dashboard-carousel.js',
+            ['jquery', 'wp-util'],
+            SEWN_SCREENSHOTS_VERSION,
+            true
+        );
+
+        // Localize script with necessary data
+        wp_localize_script('sewn-dashboard-carousel', 'sewnDashboard', [
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('sewn_api_management'),
+            'debug' => WP_DEBUG
+        ]);
+
+        // Enqueue both on our admin page
+        wp_enqueue_style('sewn-dashboard-carousel');
+        wp_enqueue_script('sewn-dashboard-carousel');
     }
 }

@@ -1,157 +1,295 @@
 (function($) {
     'use strict';
 
-    // Main admin functionality
-    const SewnAdmin = {
-        init: function() {
-            if (this.isDebug()) {
-                console.log('Initializing SewnAdmin...');
-            }
-            this.initFallbackForm();
-        },
+    // Service selection handling
+    function handleServiceSelection() {
+        const $serviceSelect = $('#sewn_fallback_service');
+        const $details = $('.sewn-fallback-service-details');
 
-        isDebug: function() {
-            return typeof window.sewnAdmin !== 'undefined' && window.sewnAdmin.debug;
-        },
-
-        log: function(message, data = null) {
-            if (this.isDebug()) {
-                if (data) {
-                    console.log(message, data);
-                } else {
-                    console.log(message);
-                }
-            }
-        },
-
-        initFallbackForm: function() {
-            const fallbackForm = $('#fallback-service-form');
+        $serviceSelect.on('change', function() {
+            const service = $(this).val();
+            $details.removeClass('active').hide();
             
-            if (!fallbackForm.length) {
-                this.log('Fallback form not found on current page');
+            if (service) {
+                $details.filter(`[data-service="${service}"]`)
+                    .addClass('active')
+                    .fadeIn(300);
+            }
+        });
+    }
+
+    // Test configuration handling
+    function handleTestConfiguration() {
+        $('.sewn-test-fallback').on('click', function(e) {
+            e.preventDefault();
+            
+            const $button = $(this);
+            const service = $button.data('service');
+            const nonce = $button.data('nonce');
+
+            if ($button.hasClass('loading')) {
                 return;
             }
 
-            this.log('Initializing fallback form');
+            $button.addClass('loading')
+                   .prop('disabled', true);
 
-            // Handle form submission
-            fallbackForm.on('submit', (e) => {
-                e.preventDefault();
-                
-                const form = $(e.currentTarget);
-                const submitButton = form.find('button[type="submit"]');
-                const messagesDiv = $('#fallback-service-messages');
-                const serviceInput = $('#service');
-                const apiKeyInput = $('#api_key');
-                
-                this.log('Processing fallback form submission', {
-                    service: serviceInput.val(),
-                    hasApiKey: !!apiKeyInput.val()
-                });
-                
-                submitButton.prop('disabled', true).text('Updating...');
-                
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'sewn_test_fallback',
+                    service: service,
+                    nonce: nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Update quota information if available
+                        if (response.data.quota) {
+                            updateQuotaDisplay(response.data.quota);
+                        }
+                        
+                        // Show success message
+                        showNotice('success', response.data.message);
+                    } else {
+                        showNotice('error', response.data.message);
+                    }
+                },
+                error: function() {
+                    showNotice('error', sewn_admin.strings.test_failed);
+                },
+                complete: function() {
+                    $button.removeClass('loading')
+                           .prop('disabled', false);
+                }
+            });
+        });
+    }
+
+    // Service refresh handling
+    function handleServiceRefresh() {
+        $('.sewn-refresh-services').on('click', function(e) {
+            e.preventDefault();
+            
+            const $button = $(this);
+            const nonce = $button.data('nonce');
+
+            if ($button.hasClass('loading')) {
+                return;
+            }
+
+            $button.addClass('loading')
+                   .prop('disabled', true);
+
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'sewn_refresh_services',
+                    nonce: nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Replace the services section with updated content
+                        $('.sewn-services-status').replaceWith(response.data.html);
+                        showNotice('success', sewn_admin.strings.refresh_success);
+                    } else {
+                        showNotice('error', response.data.message);
+                    }
+                },
+                error: function() {
+                    showNotice('error', sewn_admin.strings.refresh_failed);
+                },
+                complete: function() {
+                    $button.removeClass('loading')
+                           .prop('disabled', false);
+                }
+            });
+        });
+    }
+
+    // Helper function to update quota display
+    function updateQuotaDisplay(quota) {
+        const $status = $('.sewn-fallback-status');
+        if (!$status.length || !quota) return;
+
+        let html = '';
+        if (quota.remaining) {
+            html += `<p>${sewn_admin.strings.remaining_credits}: ${quota.remaining}</p>`;
+        }
+        if (quota.reset_date) {
+            html += `<p>${sewn_admin.strings.quota_reset}: ${quota.reset_date}</p>`;
+        }
+
+        $status.find('.notice').html(html);
+    }
+
+    // Helper function to show admin notices
+    function showNotice(type, message) {
+        const $notice = $('<div>')
+            .addClass(`notice notice-${type} is-dismissible`)
+            .append($('<p>').text(message));
+
+        const $existing = $('.sewn-admin-notice');
+        if ($existing.length) {
+            $existing.replaceWith($notice);
+        } else {
+            $('.wrap h1').after($notice);
+        }
+
+        // Initialize WordPress dismissible notices
+        if (window.wp && window.wp.notices) {
+            window.wp.notices.removeDismissible($notice);
+        }
+    }
+
+    // Add this to your existing admin.js file
+    function handleServiceTabs() {
+        $('.sewn-tab-button').on('click', function(e) {
+            e.preventDefault();
+            
+            const $button = $(this);
+            const tabId = $button.data('tab');
+            
+            // Update buttons
+            $('.sewn-tab-button').removeClass('active');
+            $button.addClass('active');
+            
+            // Update content
+            $('.sewn-tab-content').hide();
+            $(`#${tabId}-service-tab`).fadeIn(300);
+            
+            // Update service selection if needed
+            if (tabId === 'fallback') {
+                $('input[name="sewn_active_service"][value="none"]').prop('checked', true);
+            } else {
+                const defaultService = $('.sewn-service-option input[type="radio"]').not('[value="none"]').first().val();
+                $(`input[name="sewn_active_service"][value="${defaultService}"]`).prop('checked', true);
+            }
+        });
+    }
+
+    // Installation progress handling
+    function handleInstallationProgress() {
+        let progressTimer = null;
+        
+        $('.sewn-install-tool').on('click', function(e) {
+            e.preventDefault();
+            const $button = $(this);
+            const toolId = $button.data('tool');
+            const nonce = $button.data('nonce');
+            
+            if ($button.hasClass('loading')) return;
+            
+            $button.addClass('loading').prop('disabled', true);
+            startProgressTracking(toolId);
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'sewn_install_tool',
+                    tool: toolId,
+                    nonce: nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        showNotice('success', response.data.message);
+                    } else {
+                        showNotice('error', response.data.message);
+                    }
+                },
+                error: function() {
+                    showNotice('error', sewn_admin.strings.installation_failed);
+                },
+                complete: function() {
+                    $button.removeClass('loading').prop('disabled', false);
+                    stopProgressTracking();
+                }
+            });
+        });
+        
+        function startProgressTracking(toolId) {
+            progressTimer = setInterval(() => {
                 $.ajax({
-                    url: window.sewnAdmin.ajaxurl,
+                    url: ajaxurl,
                     type: 'POST',
                     data: {
-                        action: 'sewn_update_fallback_service',
-                        nonce: $('#fallback_nonce').val(),
-                        service: serviceInput.val(),
-                        api_key: apiKeyInput.val()
+                        action: 'sewn_get_installation_progress',
+                        tool: toolId,
+                        nonce: sewn_admin.nonce
                     },
-                    success: (response) => {
-                        this.log('Received response:', response);
-                        
+                    success: function(response) {
                         if (response.success) {
-                            this.handleSuccessResponse(response, {
-                                form,
-                                serviceInput,
-                                apiKeyInput,
-                                messagesDiv
-                            });
-                        } else {
-                            this.handleErrorResponse(response, messagesDiv);
+                            updateProgressUI(response.data);
                         }
-                    },
-                    error: (xhr, status, error) => {
-                        this.handleAjaxError(error, messagesDiv);
-                    },
-                    complete: () => {
-                        submitButton.prop('disabled', false).text('Update Fallback Service');
-                        this.log('Request completed');
                     }
                 });
-            });
-        },
-
-        handleSuccessResponse: function(response, elements) {
-            const { form, serviceInput, apiKeyInput, messagesDiv } = elements;
-            
-            // Update form values
-            serviceInput.val(response.data.service);
-            if (response.data.api_key) {
-                apiKeyInput.val(response.data.api_key);
-            }
-
-            // Show success message
-            messagesDiv.html(`
-                <div class="notice notice-success is-dismissible">
-                    <p>${response.data.message}</p>
-                    <p>Service: ${response.data.service}</p>
-                    <p>API Key Status: ${response.data.has_key ? 'Set' : 'Not Set'}</p>
-                </div>
-            `);
-
-            // Update status indicator
-            this.updateApiKeyStatus(apiKeyInput, response.data.has_key);
-
-            // Refresh page after delay
-            if (response.data.has_key) {
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            }
-        },
-
-        handleErrorResponse: function(response, messagesDiv) {
-            this.log('Error response:', response);
-            messagesDiv.html(`
-                <div class="notice notice-error is-dismissible">
-                    <p>Error: ${response.data.message}</p>
-                </div>
-            `);
-        },
-
-        handleAjaxError: function(error, messagesDiv) {
-            this.log('Ajax error:', error);
-            messagesDiv.html(`
-                <div class="notice notice-error is-dismissible">
-                    <p>Failed to update fallback service configuration</p>
-                    <p>Error: ${error}</p>
-                </div>
-            `);
-        },
-
-        updateApiKeyStatus: function(apiKeyInput, hasKey) {
-            const keyWrapper = apiKeyInput.parent();
-            const existingStatus = keyWrapper.find('.api-key-status');
-            
-            if (hasKey) {
-                if (existingStatus.length) {
-                    existingStatus.show();
-                } else {
-                    apiKeyInput.after('<span class="api-key-status success">✓ API Key Set</span>');
-                }
-            } else {
-                existingStatus.remove();
+            }, 2000);
+        }
+        
+        function stopProgressTracking() {
+            if (progressTimer) {
+                clearInterval(progressTimer);
+                progressTimer = null;
             }
         }
-    };
+        
+        function updateProgressUI(data) {
+            const $progress = $('.sewn-installation-progress');
+            if (!$progress.length) return;
+            
+            $progress.find('.progress-bar').css('width', data.progress + '%');
+            $progress.find('.current-step').text(data.current_step);
+            
+            if (data.status === 'complete') {
+                stopProgressTracking();
+            }
+        }
+    }
 
-    // Initialize on document ready
-    $(function() {
-        SewnAdmin.init();
+    // Health check handling
+    function handleHealthCheck() {
+        $('.sewn-run-health-check').on('click', function(e) {
+            e.preventDefault();
+            const $button = $(this);
+            const nonce = $button.data('nonce');
+            
+            if ($button.hasClass('loading')) return;
+            
+            $button.addClass('loading').prop('disabled', true);
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'sewn_run_health_check',
+                    nonce: nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('.sewn-health-status').html(response.data.html);
+                    } else {
+                        showNotice('error', response.data.message);
+                    }
+                },
+                complete: function() {
+                    $button.removeClass('loading').prop('disabled', false);
+                }
+            });
+        });
+    }
+
+    // Initialize everything when document is ready
+    $(document).ready(function() {
+        handleServiceSelection();
+        handleTestConfiguration();
+        handleServiceRefresh();
+        handleServiceTabs();
+        
+        // New initializations
+        handleInstallationProgress();
+        handleHealthCheck();
     });
 
 })(jQuery);

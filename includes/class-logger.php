@@ -3,11 +3,14 @@ if (!defined('ABSPATH')) exit;
 
 class SEWN_Logger {
     private $log_table;
+    private $log_file;
     
     public function __construct() {
         global $wpdb;
         $this->log_table = $wpdb->prefix . 'sewn_logs';
+        $this->log_file = plugin_dir_path(dirname(__FILE__)) . 'logs/screenshot-service.log';
         $this->maybe_create_table();
+        $this->maybe_create_log_directory();
     }
 
     private function maybe_create_table() {
@@ -28,6 +31,27 @@ class SEWN_Logger {
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
+    }
+
+    private function maybe_create_log_directory() {
+        $log_dir = dirname($this->log_file);
+        if (!file_exists($log_dir)) {
+            wp_mkdir_p($log_dir);
+        }
+    }
+
+    private function write_to_file($level, $message, $context = []) {
+        $timestamp = current_time('mysql');
+        $formatted_context = empty($context) ? '' : ' - ' . json_encode($context);
+        $log_entry = sprintf(
+            "[%s] %s: %s%s\n",
+            $timestamp,
+            strtoupper($level),
+            $message,
+            $formatted_context
+        );
+        
+        error_log($log_entry, 3, $this->log_file);
     }
 
     public function debug($message, $context = []) {
@@ -59,6 +83,8 @@ class SEWN_Logger {
             ],
             ['%s', '%s', '%s', '%s']
         );
+        
+        $this->write_to_file($level, $message, $context);
     }
 
     public function get_recent_logs($limit = 10) {

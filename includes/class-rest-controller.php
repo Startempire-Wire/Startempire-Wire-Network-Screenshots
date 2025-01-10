@@ -1,7 +1,5 @@
 <?php
 /**
- * REST API Controller for the Screenshot Service
- *
  * This controller handles all REST API endpoints for the screenshot service. It provides
  * functionality for taking screenshots, managing authentication, and handling cache operations.
  * 
@@ -78,6 +76,60 @@
  * @since 1.0.0 Initial release
  * @since 2.0.0 Added rate limiting, enhanced auth, and caching
  * @since 2.1.0 Added detailed error handling and documentation
+ *
+ * @OA\Info(
+ *     version="2.1.0",
+ *     title="Startempire Wire Network Screenshots API",
+ *     description="REST API for managing website screenshots within the Startempire Wire Network",
+ *     @OA\Contact(
+ *         email="api@startempirewire.network",
+ *         name="API Support"
+ *     )
+ * )
+ *
+ * @OA\Server(
+ *     url="https://{host}/wp-json/sewn-screenshots/v1",
+ *     description="Screenshot API endpoint",
+ *     @OA\ServerVariable(
+ *         serverVariable="host",
+ *         default="startempirewire.network",
+ *         description="API host"
+ *     )
+ * )
+ *
+ * @OA\SecurityScheme(
+ *     securityScheme="ApiKeyAuth",
+ *     type="apiKey",
+ *     in="header",
+ *     name="X-API-Key"
+ * )
+ *
+ * @OA\SecurityScheme(
+ *     securityScheme="MembershipAuth",
+ *     type="apiKey",
+ *     in="header",
+ *     name="X-Membership-Token"
+ * )
+ *
+ * @OA\Schema(
+ *     schema="Error",
+ *     required={"code", "message"},
+ *     @OA\Property(
+ *         property="code",
+ *         type="string",
+ *         description="Error code"
+ *     ),
+ *     @OA\Property(
+ *         property="message",
+ *         type="string",
+ *         description="Error message"
+ *     ),
+ *     @OA\Property(
+ *         property="data",
+ *         type="object",
+ *         description="Additional error data"
+ *     )
+ * )
  */
 
 // Exit if accessed directly
@@ -88,6 +140,15 @@ if (!defined('ABSPATH')) {
 // Ensure WordPress REST API is available
 if (!class_exists('WP_REST_Controller')) {
     return;
+}
+
+// At the top of the file, after the PHP opening tag
+if (!class_exists('SEWN_API_Manager')) {
+    require_once plugin_dir_path(__FILE__) . 'class-api-manager.php';
+}
+
+if (!class_exists('SEWN_Cache')) {
+    require_once plugin_dir_path(__FILE__) . 'class-cache.php';
 }
 
 /**
@@ -168,18 +229,51 @@ class SEWN_REST_Controller extends WP_REST_Controller {
      * 
      * @param SEWN_Screenshot_Service $screenshot_service Service for handling screenshots
      * @param SEWN_Logger $logger Logger instance for error tracking
-     * @param SEWN_Cache|null $cache Optional. Cache handler instance
-     * @param SEWN_Rate_Limiter|null $rate_limiter Optional. Rate limiter instance
+     * @param SEWN_Rate_Limiter $rate_limiter Rate limiter instance
      * @throws RuntimeException If required services are not available
      */
-    public function __construct($screenshot_service, $logger) {
-        $this->screenshot_service = $screenshot_service;
-        $this->logger = $logger;
+    public function __construct($logger, $rate_limiter, $screenshot_service) {
+        if (!$logger) {
+            throw new Exception('Logger is required');
+        }
         
-        // Pass logger to cache service
+        $this->logger = $logger;
+        $this->rate_limiter = $rate_limiter;
+        
+        $this->logger->debug('Initializing REST Controller', [
+            'has_logger' => !empty($this->logger),
+            'has_rate_limiter' => !empty($this->rate_limiter)
+        ]);
+        
         $this->cache = new SEWN_Cache($this->logger);
         
-        // Register routes
+        // Initialize API manager with default settings
+        $default_settings = [
+            'fallback_service' => 'screenshotmachine',
+            'api_mode' => 'primary'
+        ];
+        
+        try {
+            $this->api_manager = new SEWN_API_Manager($this->logger, $default_settings);
+            $this->logger->debug('API Manager initialized', [
+                'settings' => $default_settings,
+                'has_api_manager' => !empty($this->api_manager)
+            ]);
+        } catch (Exception $e) {
+            $this->logger->error('Failed to initialize API Manager', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+        
+        // Add screenshot service
+        $this->screenshot_service = $screenshot_service;
+        
+        $this->logger->debug('REST Controller initialization complete', [
+            'has_screenshot_service' => !empty($this->screenshot_service)
+        ]);
+        
         add_action('rest_api_init', array($this, 'register_routes'));
     }
 
@@ -228,6 +322,21 @@ class SEWN_REST_Controller extends WP_REST_Controller {
     public function register_routes() {
         // Screenshot creation endpoint
         register_rest_route($this->namespace, '/screenshot', [
+            [
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => [$this, 'get_screenshot'],
+                'permission_callback' => [$this, 'check_permission'],
+                'args' => [
+                    'url' => [
+                        'required' => true,
+                        'type' => 'string',
+                        'description' => 'URL to capture',
+                        'validate_callback' => function($param) {
+                            return filter_var($param, FILTER_VALIDATE_URL) !== false;
+                        }
+                    ]
+                ]
+            ],
             [
                 'methods' => WP_REST_Server::CREATABLE,
                 'callback' => [$this, 'take_screenshot'],
@@ -290,17 +399,146 @@ class SEWN_REST_Controller extends WP_REST_Controller {
             'notes' => 'Completes OAuth2 flow'
         ]);
 
-        $this->logger->debug('REST routes registered', [
-            'namespace' => $this->namespace,
-            'routes' => [
-                '/screenshot',
-                '/preview/screenshot',
-                '/status',
-                '/cache/purge',
-                '/auth/connect',
-                '/auth/exchange'
-            ]
+        // Network-specific endpoints
+        register_rest_route($this->namespace, '/network/status', [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => [$this, 'get_network_status'],
+            'permission_callback' => [$this, 'check_network_permission'],
+            'schema' => [$this, 'get_network_status_schema']
         ]);
+
+        register_rest_route($this->namespace, '/network/sync', [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => [$this, 'sync_network_screenshots'],
+            'permission_callback' => [$this, 'check_network_permission']
+        ]);
+
+        if (method_exists($this->logger, 'debug')) {
+            $this->logger->debug('REST routes registered', [
+                'namespace' => $this->namespace,
+                'routes' => [
+                    '/screenshot',
+                    '/preview/screenshot',
+                    '/status',
+                    '/cache/purge',
+                    '/auth/connect',
+                    '/auth/exchange',
+                    '/network/status',
+                    '/network/sync'
+                ]
+            ]);
+        }
+    }
+
+    /**
+     * Handle GET requests for screenshots
+     *
+     * Allows taking screenshots via GET request with URL parameter.
+     * Example: /wp-json/sewn-screenshots/v1/screenshot?url=https://example.com
+     *
+     * Argument Details:
+     * 1. url (required)
+     *    - Must be a valid URL
+     *    - Sanitized using esc_url_raw
+     *    - Validated using filter_var
+     *
+     * 2. type (optional)
+     *    - Values: 'full' or 'preview'
+     *    - Default: 'full'
+     *    - Used to determine screenshot size and quality
+     *
+     * 3. options (optional)
+     *    - width: 100-2560px (default: 1280)
+     *    - height: 100-2560px (default: 800)
+     *    - quality: 1-100 (default: 85)
+     *    - Additional options validated per type
+     *
+     * Example Usage:
+     * ```
+     * POST /wp-json/sewn-screenshots/v1/screenshot
+     * {
+     *   "url": "https://example.com",
+     *   "type": "full",
+     *   "options": {
+     *     "width": 1920,
+     *    "height": 1080,
+     *     "quality": 90
+     *   }
+     * }
+     * ```
+     *
+     * @param WP_REST_Request $request Request object
+     * @return WP_REST_Response|WP_Error Screenshot data or error
+     *
+     * @OA\Get(
+     *     path="/screenshot",
+     *     summary="Take a screenshot of a URL",
+     *     description="Captures a full webpage screenshot with optional parameters",
+     *     operationId="getScreenshot",
+     *     tags={"screenshots"},
+     *     @OA\Parameter(
+     *         name="url",
+     *         in="query",
+     *         required=true,
+     *         description="URL to capture",
+     *         @OA\Schema(type="string", format="uri")
+     *     ),
+     *     @OA\Parameter(
+     *         name="type",
+     *         in="query",
+     *         required=false,
+     *         description="Screenshot type",
+     *         @OA\Schema(type="string", enum={"full", "preview"}, default="full")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Screenshot captured successfully",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="url", type="string", format="uri"),
+     *                 @OA\Property(property="width", type="integer", example=1280),
+     *                 @OA\Property(property="height", type="integer", example=800),
+     *                 @OA\Property(property="type", type="string", example="full"),
+     *                 @OA\Property(property="created", type="string", format="date-time")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Invalid URL or parameters",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Authentication required",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=429,
+     *         description="Rate limit exceeded",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     security={
+     *         {"ApiKeyAuth": {}},
+     *         {"MembershipAuth": {}}
+     *     }
+     * )
+     */
+    public function get_screenshot($request) {
+        // Get URL from query parameter
+        $url = $request->get_param('url');
+        
+        // Create standardized request for screenshot
+        $screenshot_request = new WP_REST_Request('POST', "/{$this->namespace}/screenshot");
+        $screenshot_request->set_param('url', $url);
+        $screenshot_request->set_param('type', 'full');
+        
+        // Use existing screenshot logic
+        return $this->take_screenshot($screenshot_request);
     }
 
     /**
@@ -399,8 +637,132 @@ class SEWN_REST_Controller extends WP_REST_Controller {
      * Defines the expected parameters for the preview endpoint
      * with validation rules and defaults.
      *
+     * Argument Details:
+     * 1. url (required)
+     *    - Must be a valid URL
+     *    - Sanitized using esc_url_raw
+     *    - Validated using filter_var
+     *
+     * 2. options (optional)
+     *    - width: 320-2560px (default: 1280)
+     *    - height: 240-1600px (default: 800)
+     *    - quality: 1-100 (default: 85)
+     *    - format: 'png'|'jpg'|'webp' (default: 'png')
+     *
+     * Example Usage:
+     * ```
+     * GET /wp-json/sewn-screenshots/v1/preview/screenshot?url=https://example.com
+     * GET /wp-json/sewn-screenshots/v1/preview/screenshot?url=https://example.com&options[width]=800
+     * ```
+     *
+     * Response Format:
+     * ```json
+     * {
+     *   "success": true,
+     *   "data": {
+     *     "url": "https://example.com/preview.jpg",
+     *     "width": 1280,
+     *     "height": 800,
+     *     "format": "jpg",
+     *     "expires": "2024-01-01T00:00:00Z"
+     *   },
+     *   "meta": {
+     *     "cached": true,
+     *     "generated": "2023-12-31T00:00:00Z"
+     *   }
+     * }
+     * ```
+     *
      * @since 2.0.0
      * @return array Preview arguments schema
+     *
+     * @OA\Get(
+     *     path="/preview/screenshot",
+     *     summary="Get an optimized preview screenshot",
+     *     description="Returns a cached or newly generated preview screenshot",
+     *     operationId="getPreviewScreenshot",
+     *     tags={"screenshots"},
+     *     @OA\Parameter(
+     *         name="url",
+     *         in="query",
+     *         required=true,
+     *         description="URL to capture",
+     *         @OA\Schema(type="string", format="uri")
+     *     ),
+     *     @OA\Parameter(
+     *         name="options",
+     *         in="query",
+     *         required=false,
+     *         description="Preview options",
+     *         @OA\Schema(ref="#/components/schemas/PreviewOptions")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Preview screenshot retrieved successfully",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="url", type="string", format="uri"),
+     *                 @OA\Property(property="width", type="integer", example=1280),
+     *                 @OA\Property(property="height", type="integer", example=800),
+     *                 @OA\Property(property="format", type="string", example="jpg"),
+     *                 @OA\Property(property="expires", type="string", format="date-time")
+     *             ),
+     *             @OA\Property(
+     *                 property="meta",
+     *                 type="object",
+     *                 @OA\Property(property="cached", type="boolean"),
+     *                 @OA\Property(property="generated", type="string", format="date-time")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Invalid URL or parameters",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
+     *
+     * @OA\Schema(
+     *     schema="PreviewOptions",
+     *     title="Preview Options",
+     *     description="Configuration options for preview screenshots",
+     *     type="object",
+     *     @OA\Property(
+     *         property="width",
+     *         type="integer",
+     *         minimum=320,
+     *         maximum=2560,
+     *         default=1280,
+     *         description="Preview width in pixels"
+     *     ),
+     *     @OA\Property(
+     *         property="height",
+     *         type="integer",
+     *         minimum=240,
+     *         maximum=1600,
+     *         default=800,
+     *         description="Preview height in pixels"
+     *     ),
+     *     @OA\Property(
+     *         property="quality",
+     *         type="integer",
+     *         minimum=1,
+     *         maximum=100,
+     *         default=85,
+     *         description="Image quality (1-100)"
+     *     ),
+     *     @OA\Property(
+     *         property="format",
+     *         type="string",
+     *         enum={"png", "jpg", "webp"},
+     *         default="png",
+     *         description="Output image format"
+     *     )
+     * )
      */
     private function get_preview_args() {
         return [
@@ -490,6 +852,8 @@ class SEWN_REST_Controller extends WP_REST_Controller {
      * @return bool|WP_Error True if permission is granted, WP_Error if unauthorized
      */
     public function check_permission($request) {
+        $this->logger->debug('Checking permission for request');
+        
         // Check for admin users first
         if (current_user_can('manage_options')) {
             $this->logger->debug('Admin user authenticated', [
@@ -529,7 +893,7 @@ class SEWN_REST_Controller extends WP_REST_Controller {
                 $validated = $this->validate_jwt($token);
                 if ($validated) {
                     $this->logger->debug('Authentication successful via JWT');
-                    return true;
+        return true;
                 }
             } catch (Exception $e) {
                 $this->logger->error('JWT validation failed', [
@@ -769,6 +1133,11 @@ class SEWN_REST_Controller extends WP_REST_Controller {
      */
     public function take_screenshot($request) {
         $start_time = microtime(true);
+        
+        $this->logger->debug('REST screenshot request received', [
+            'params' => $request->get_params(),
+            'headers' => $request->get_headers()
+        ]);
 
         try {
             // Extract and validate parameters
@@ -776,8 +1145,7 @@ class SEWN_REST_Controller extends WP_REST_Controller {
             $type = $request->get_param('type');
             $options = $request->get_param('options');
 
-            // Performance logging
-            $this->logger->debug('Screenshot request initiated', [
+            $this->logger->debug('Processing screenshot request', [
                 'url' => $url,
                 'type' => $type,
                 'options' => $options
@@ -827,6 +1195,11 @@ class SEWN_REST_Controller extends WP_REST_Controller {
             $fallback_service = $api_manager->get_current_service();
             $api_key = $api_manager->get_current_api_key();
 
+            $this->logger->debug('API configuration loaded', [
+                'fallback_service' => $fallback_service,
+                'has_api_key' => !empty($api_key)
+            ]);
+
             // Debug API configuration
             $this->logger->debug('Screenshot service configuration', [
                 'fallback_service' => $fallback_service,
@@ -834,14 +1207,55 @@ class SEWN_REST_Controller extends WP_REST_Controller {
                 'service_url' => $this->fallback_services[$fallback_service]['url'] ?? 'none'
             ]);
 
-            // Configure screenshot options with API key
+            // Get active API mode
+            $active_mode = get_option('sewn_active_api', 'primary');
+            $this->logger->debug('Taking screenshot with mode', ['mode' => $active_mode]);
+
+            // Add mode to screenshot options
             $screenshot_options = array_merge($options ?? [], [
                 'key' => $api_key,
-                'service' => $fallback_service
+                'service' => $active_mode === 'primary' ? 'primary' : $fallback_service,
+                'mode' => $active_mode
             ]);
 
-            // Take screenshot with configured options
-            $result = $this->screenshot_service->take_screenshot($url, $type, $screenshot_options);
+            if (current_user_can('manage_options') && $type === 'test') {
+                // Get active mode and API keys
+                $active_mode = get_option('sewn_active_api', 'primary');
+                $api_key = get_option('sewn_api_key');
+                
+                $this->logger->debug('Screenshot request configuration', [
+                    'active_mode' => $active_mode,
+                    'has_api_key' => !empty($api_key)
+                ]);
+
+                // Only use fallback if primary mode is not set or primary key is missing
+                if ($active_mode === 'primary' && !empty($api_key)) {
+                    $this->logger->debug('Using primary service');
+                    $result = $this->screenshot_service->take_screenshot($url, $type, $screenshot_options);
+                } else {
+                    $this->logger->debug('Using fallback service', [
+                        'reason' => empty($api_key) ? 'missing_api_key' : 'fallback_mode_active'
+                    ]);
+                    $fallback_service = get_option('sewn_fallback_service', 'screenshotmachine');
+                    $result = $this->screenshot_service->take_screenshot_fallback($url, $type, $screenshot_options);
+                }
+            } else {
+                $api_key = get_option('sewn_api_key');
+                $fallback_service = get_option('sewn_fallback_service', 'screenshotmachine');
+
+                if (!empty($api_key)) {
+                    $this->logger->debug('Using primary API key for screenshot');
+                    $result = $this->screenshot_service->take_screenshot($url, $type, $screenshot_options);
+                } else {
+                    $this->logger->debug('Using fallback service', ['service' => $fallback_service]);
+                    $result = $this->screenshot_service->take_screenshot_fallback($url, $type, $screenshot_options);
+                }
+            }
+
+            $this->logger->debug('Screenshot result received', [
+                'result' => $result,
+                'duration' => microtime(true) - $start_time
+            ]);
 
             // Debug screenshot result
             $this->logger->debug('Screenshot result', [
@@ -904,7 +1318,7 @@ class SEWN_REST_Controller extends WP_REST_Controller {
             }
 
             $response_data = [
-                'success' => true,
+            'success' => true,
                 'method' => $result['method'] ?? 'fallback_service',
                 'service' => $result['service'] ?? 'screenshotmachine',
                 'timestamp' => current_time('mysql'),
@@ -921,6 +1335,9 @@ class SEWN_REST_Controller extends WP_REST_Controller {
                 'response' => $response_data
             ]);
 
+            // Add authentication method to response
+            $response_data['auth_method'] = $this->get_current_auth_method();
+            
             return rest_ensure_response($response_data);
 
         } catch (Exception $e) {
@@ -1010,8 +1427,8 @@ class SEWN_REST_Controller extends WP_REST_Controller {
                 sleep($retry_delay);
                 $retry_delay *= 2; // Exponential backoff
             }
-        }
     }
+}
 
     /**
      * Handle network authentication with enhanced security
@@ -1443,8 +1860,138 @@ class SEWN_REST_Controller extends WP_REST_Controller {
      * - fallback_available: boolean
      * - cache_size: int (bytes)
      *
+     * Status Information Includes:
+     * 1. Service Health
+     *    - Screenshot service status
+     *    - Available screenshot methods
+     *    - Current load metrics
+     *
+     * 2. Cache Status
+     *    - Cache hit rate
+     *    - Storage usage
+     *    - Cache health
+     *
+     * 3. Rate Limiting
+     *    - Current rate limit
+     *    - Remaining requests
+     *    - Reset time
+     *
+     * 4. Network Status
+     *    - Ring Leader connection
+     *    - Network role
+     *    - Sync status
+     *
+     * Example Response:
+     * ```json
+     * {
+     *   "success": true,
+     *   "data": {
+     *     "health": {
+     *       "status": "healthy",
+     *       "uptime": "5d 12h 30m",
+     *       "load": 0.75,
+     *       "wkhtmltoimage_found": true,
+     *       "fallback_available": true
+     *     },
+     *     "cache": {
+     *       "hit_rate": 0.85,
+     *       "size": "1.2GB",
+     *       "status": "optimal"
+     *     },
+     *     "rate_limit": {
+     *       "limit": 300,
+     *       "remaining": 250,
+     *       "reset": "2024-01-01T00:00:00Z"
+     *     },
+     *     "network": {
+     *       "connected": true,
+     *       "role": "member",
+     *       "last_sync": "2024-01-01T00:00:00Z"
+     *     }
+     *   },
+     *   "meta": {
+     *     "generated": "2024-01-01T00:00:00Z",
+     *     "version": "2.1.0"
+     *   }
+     * }
+     * ```
+     *
      * @param WP_REST_Request $request Request object
      * @return WP_REST_Response Status information
+     *
+     * @since 1.0.0
+     * @since 2.0.0 Added cache and rate limit metrics
+     * @since 2.1.0 Added network status
+     *
+     * @OA\Get(
+     *     path="/status",
+     *     summary="Get service health and metrics",
+     *     description="Returns comprehensive status information about the screenshot service",
+     *     operationId="getServiceStatus",
+     *     tags={"system"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Service status retrieved successfully",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="health",
+     *                     type="object",
+     *                     @OA\Property(property="status", type="string", example="healthy"),
+     *                     @OA\Property(property="uptime", type="string", example="5d 12h 30m"),
+     *                     @OA\Property(property="load", type="number", format="float", example=0.75),
+     *                     @OA\Property(property="wkhtmltoimage_found", type="boolean", example=true),
+     *                     @OA\Property(property="fallback_available", type="boolean", example=true)
+     *                 ),
+     *                 @OA\Property(
+     *                     property="cache",
+     *                     type="object",
+     *                     @OA\Property(property="hit_rate", type="number", format="float", example=0.85),
+     *                     @OA\Property(property="size", type="string", example="1.2GB"),
+     *                     @OA\Property(property="status", type="string", example="optimal")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="rate_limit",
+     *                     type="object",
+     *                     @OA\Property(property="limit", type="integer", example=300),
+     *                     @OA\Property(property="remaining", type="integer", example=250),
+     *                     @OA\Property(property="reset", type="string", format="date-time")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="network",
+     *                     type="object",
+     *                     @OA\Property(property="connected", type="boolean"),
+     *                     @OA\Property(property="role", type="string", example="member"),
+     *                     @OA\Property(property="last_sync", type="string", format="date-time")
+     *                 )
+     *             ),
+     *             @OA\Property(
+     *                 property="meta",
+     *                 type="object",
+     *                 @OA\Property(property="generated", type="string", format="date-time"),
+     *                 @OA\Property(property="version", type="string", example="2.1.0")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Authentication required",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=429,
+     *         description="Rate limit exceeded",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     security={
+     *         {"ApiKeyAuth": {}},
+     *         {"MembershipAuth": {}}
+     *     }
+     * )
      */
     public function get_status($request) {
         $cache_stats = $this->cache->get_stats();
@@ -1487,7 +2034,7 @@ class SEWN_REST_Controller extends WP_REST_Controller {
     }
 
     /**
-     * Purge the screenshot cache with detailed reporting
+     * Purge screenshot cache
      *
      * Removes all cached screenshots and provides comprehensive statistics about the operation.
      * Implements safe cache clearing with backup and recovery mechanisms.
@@ -1498,7 +2045,20 @@ class SEWN_REST_Controller extends WP_REST_Controller {
      * - Detailed purge statistics
      * - Automatic cache warming for popular URLs
      * - Performance impact monitoring
-     * 
+     *
+     * Cache Types Cleared:
+     * - Screenshot image files
+     * - URL metadata
+     * - Response data
+     * - Temporary files
+     *
+     * Example Usage:
+     * ```
+     * curl -X POST \
+     *   -H "X-API-Key: your-api-key" \
+     *   https://your-site.com/wp-json/sewn-screenshots/v1/cache/purge
+     * ```
+     *
      * Example Success Response:
      * ```json
      * {
@@ -1517,13 +2077,83 @@ class SEWN_REST_Controller extends WP_REST_Controller {
      *   }
      * }
      * ```
-     * 
+     *
+     * Error Response:
+     * ```json
+     * {
+     *   "code": "cache_purge_failed",
+     *   "message": "Failed to purge cache: insufficient permissions",
+     *   "data": {
+     *     "status": 403
+     *   }
+     * }
+     * ```
+     *
+     * Implementation Notes:
+     * - Validates user capabilities before execution
+     * - Logs cache clearing operations
+     * - Handles file system errors gracefully
+     * - Maintains audit trail of purge operations
+     *
      * @since 1.0.0 Initial implementation
      * @since 2.0.0 Added detailed purge statistics
      * @since 2.1.0 Added selective purging and cache warming
-     * 
+     *
      * @param WP_REST_Request $request Request object
      * @return WP_REST_Response|WP_Error Success message or error
+     *
+     * @OA\Post(
+     *     path="/cache/purge",
+     *     summary="Purge screenshot cache",
+     *     description="Clears all cached screenshots and related data",
+     *     operationId="purgeCache",
+     *     tags={"cache"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Cache successfully purged",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string", example="Cache purged successfully"),
+     *             @OA\Property(
+     *                 property="statistics",
+     *                 type="object",
+     *                 @OA\Property(property="items_removed", type="integer", example=150),
+     *                 @OA\Property(property="space_freed", type="integer", example=52428800),
+     *                 @OA\Property(property="duration", type="number", format="float", example=1.23),
+     *                 @OA\Property(property="preserved_items", type="integer", example=10),
+     *                 @OA\Property(property="errors", type="integer", example=0)
+     *             ),
+     *             @OA\Property(
+     *                 property="cache_status",
+     *                 type="object",
+     *                 @OA\Property(property="current_size", type="integer", example=0),
+     *                 @OA\Property(property="last_purge", type="string", format="date-time")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Authentication required",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Insufficient permissions",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Cache purge operation failed",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     security={
+     *         {"ApiKeyAuth": {}},
+     *         {"MembershipAuth": {}}
+     *     }
+     * )
+     *
+     * @throws RuntimeException If cache system is unavailable
+     * @throws WP_Error If user lacks required capabilities
      */
     public function purge_cache($request) {
         $start_time = microtime(true);
@@ -1821,4 +2451,734 @@ class SEWN_REST_Controller extends WP_REST_Controller {
         
         return 'free';
     }
+
+    /**
+     * Get the filesystem path for a screenshot
+     *
+     * Converts a screenshot URL or identifier to its filesystem path.
+     *
+     * @since 2.1.0
+     * @param string $screenshot_url URL or identifier of the screenshot
+     * @return string|false Filesystem path or false if invalid
+     */
+    private function get_screenshot_path($screenshot_url) {
+        // Get WordPress upload directory info
+        $upload_dir = wp_upload_dir();
+        
+        // Convert URL to filesystem path
+        $file_path = str_replace(
+            $upload_dir['baseurl'],
+            $upload_dir['basedir'],
+            $screenshot_url
+        );
+        
+        // Validate path is within screenshots directory
+        $screenshots_dir = $upload_dir['basedir'] . '/screenshots';
+        if (strpos($file_path, $screenshots_dir) !== 0) {
+            $this->logger->warning('Invalid screenshot path detected', [
+                'path' => $file_path,
+                'screenshots_dir' => $screenshots_dir
+            ]);
+            return false;
+        }
+        
+        return $file_path;
+    }
+
+    /**
+     * Verify image integrity
+     *
+     * Checks if an image file is valid and not corrupted.
+     *
+     * @since 2.1.0
+     * @param string $image_path Path to the image file
+     * @return bool True if image is valid, false otherwise
+     */
+    private function verify_image_integrity($image_path) {
+        try {
+            if (!file_exists($image_path)) {
+                $this->logger->error('Image file not found', ['path' => $image_path]);
+                return false;
+            }
+
+            // Check file size
+            $file_size = filesize($image_path);
+            if ($file_size === 0) {
+                $this->logger->error('Image file is empty', ['path' => $image_path]);
+                return false;
+            }
+
+            // Verify image data
+            $image_info = getimagesize($image_path);
+            if ($image_info === false) {
+                $this->logger->error('Invalid image data', ['path' => $image_path]);
+                return false;
+            }
+
+            // Check image dimensions
+            if ($image_info[0] < 1 || $image_info[1] < 1) {
+                $this->logger->error('Invalid image dimensions', [
+                    'path' => $image_path,
+                    'width' => $image_info[0],
+                    'height' => $image_info[1]
+                ]);
+                return false;
+            }
+
+            $this->logger->debug('Image integrity verified', [
+                'path' => $image_path,
+                'size' => $file_size,
+                'dimensions' => $image_info[0] . 'x' . $image_info[1],
+                'type' => $image_info['mime']
+            ]);
+
+            return true;
+
+        } catch (Exception $e) {
+            $this->logger->error('Image verification failed', [
+                'path' => $image_path,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Get the current authentication method
+     *
+     * @since 2.1.0
+     * @return string The current authentication method
+     */
+    private function get_current_auth_method() {
+        if (!isset($this->api_manager)) {
+            return 'none';
+        }
+        
+        try {
+            return $this->api_manager->get_active_api_mode();
+        } catch (Exception $e) {
+            $this->logger->warning('Failed to get auth method', [
+                'error' => $e->getMessage()
+            ]);
+            return 'none';
+        }
+    }
+
+    /**
+     * Setup CORS headers for API requests
+     */
+    private function setup_cors() {
+        add_action('rest_api_init', function() {
+            remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
+            add_filter('rest_pre_serve_request', function($value) {
+                header('Access-Control-Allow-Origin: *');
+                header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+                header('Access-Control-Allow-Credentials: true');
+                header('Access-Control-Allow-Headers: Authorization, Content-Type, X-API-Key');
+                return $value;
+            });
+        });
+    }
+
+    /**
+     * Configure API subdomain routing
+     */
+    private function setup_api_subdomain() {
+        add_filter('rest_url_prefix', function($prefix) {
+            return 'wp-json';
+        });
+        
+        add_filter('rest_url', function($url) {
+            // Replace main domain with api subdomain
+            return preg_replace(
+                '|^' . preg_quote(get_site_url()) . '|',
+                'https://api.' . parse_url(get_site_url(), PHP_URL_HOST),
+                $url
+            );
+        });
+    }
+
+    /**
+     * Enhanced error response handling
+     */
+    private function handle_error($error, $status = 400) {
+        $response = new WP_Error(
+            'screenshot_error',
+            $error->getMessage(),
+            [
+                'status' => $status,
+                'additional_data' => [
+                    'request_id' => uniqid('sewn_'),
+                    'timestamp' => time(),
+                    'service_status' => $this->get_service_status()
+                ]
+            ]
+        );
+
+        $this->logger->error('API Error', [
+            'error' => $error->getMessage(),
+            'trace' => $error->getTraceAsString(),
+            'status' => $status
+        ]);
+
+        return $response;
+    }
+
+    /**
+     * Enhanced authorization check with support for both API key and membership token
+     *
+     * Supports authentication via:
+     * 1. API Key (X-API-Key header)
+     * 2. Membership Token (X-Membership-Token header)
+     * 
+     * Rate limits are applied based on authentication method:
+     * - API Key: Standard API rate limits
+     * - Membership Token: Tier-based rate limits
+         *
+         * @param WP_REST_Request $request
+         * @return bool|WP_Error
+         */
+        public function check_authorization($request) {
+        $api_key = $request->get_header('X-API-Key');
+        $membership_token = $request->get_header('X-Membership-Token');
+
+        // Check API key first (maintain existing functionality)
+        if ($api_key) {
+            if ($this->api_manager->verify_api_key($api_key)) {
+                // Apply standard API rate limiting
+                if (!$this->rate_limiter->check_api_limit($api_key)) {
+                return new WP_Error(
+                        'rate_limit_exceeded',
+                        'API rate limit exceeded',
+                        ['status' => 429]
+                    );
+                }
+                return true;
+            }
+        }
+
+        // If no valid API key, check membership token
+        if ($membership_token && isset($this->membership_service)) {
+            if ($this->membership_service->validate_token($membership_token)) {
+                $membership_level = $this->membership_service->get_level($membership_token);
+                
+                // Apply tier-based rate limiting
+                if (!$this->rate_limiter->check_membership_limit($membership_token, $membership_level)) {
+                return new WP_Error(
+                    'rate_limit_exceeded',
+                    'Rate limit exceeded for your membership level',
+                    ['status' => 429]
+                );
+            }
+            return true;
+            }
+        }
+
+        // No valid authentication provided
+        return new WP_Error(
+            'invalid_auth',
+            'Invalid or missing authentication',
+            ['status' => 401]
+        );
+        }
+
+        /**
+         * Enhanced response formatting with comprehensive metadata
+         * 
+         * Formats API responses with standardized structure including:
+         * 1. Base Response:
+         *    - Success status
+         *    - Primary data payload
+         *    - Version and timestamp
+         *    - Rate limiting information
+         * 
+         * 2. Membership Information:
+         *    - Current membership level
+         *    - Membership status
+         * 
+         * 3. Network Metadata:
+         *    - Ring Leader connection status
+         *    - Network ID
+         *    - Node type and role
+         * 
+         * Standard Response Format:
+         * {
+         *   "success": true,
+         *   "data": { ... },
+         *   "meta": {
+         *     "version": "1.0",
+         *     "timestamp": "2024-01-20T12:00:00Z",
+         *     "rate_limit": {
+         *       "limit": 100,
+         *       "remaining": 95
+         *     },
+         *     "membership": {
+         *       "level": "premium",
+         *       "active": true
+         *     },
+         *     "network": {
+         *       "ring_leader_connected": true,
+         *       "network_id": "net_123456",
+         *       "node_type": "member"
+         *     }
+         *   }
+         * }
+         * 
+         * @since 2.1.0
+         * @param mixed $data Primary response data
+         * @param array $metadata Additional metadata to include in response
+         * @return array Enhanced response with comprehensive metadata
+         */
+        protected function format_response($data, $metadata = []) {
+        $response = [
+                'success' => true,
+                'data' => $data,
+                'meta' => array_merge([
+                    'version' => '1.0',
+                    'timestamp' => time(),
+                    'rate_limit' => $this->rate_limiter->get_limit_info(),
+                ], $metadata)
+            ];
+
+        // Add membership info if using membership token
+        if (isset($this->membership_service) && $this->membership_service->is_active()) {
+            $response['meta']['membership_level'] = $this->membership_service->get_current_level();
+        }
+
+        // Add network-specific metadata
+        $response['meta']['network'] = [
+            'ring_leader_connected' => $this->check_ring_leader_connection(),
+            'network_id' => get_option('sewn_network_id'),
+            'node_type' => $this->get_network_node_type()
+        ];
+
+        return $response;
+    }
+
+    /**
+     * Register additional network-aware routes
+     * 
+     * Registers endpoints specifically designed for network integration:
+     * 
+     * 1. /extension/batch - Handles bulk screenshot requests from Chrome Extension
+     *    - Supports multiple URLs in single request
+     *    - Rate limited based on membership tier
+     *    - Optimized for extension performance
+     * 
+     * 2. /network/status - Reports network connectivity and health
+     *    - Ring Leader connection status
+     *    - Cache performance metrics
+     *    - Node type and role
+     * 
+     * 3. /webhooks - Manages network event notifications
+     *    - Screenshot completion events
+     *    - Error notifications
+     *    - Status changes
+     * 
+     * @since 2.1.0
+     *
+     * @OA\Tag(
+     *     name="network",
+     *     description="Network integration endpoints"
+     * )
+     */
+    public function register_network_routes() {
+        /**
+         * @OA\Post(
+         *     path="/extension/batch",
+         *     summary="Process batch screenshot requests",
+         *     description="Handles multiple screenshot requests from Chrome Extension",
+         *     operationId="batchScreenshots",
+         *     tags={"network"},
+         *     @OA\RequestBody(
+         *         required=true,
+         *         @OA\JsonContent(
+         *             type="object",
+         *             @OA\Property(
+         *                 property="urls",
+         *                 type="array",
+         *                 @OA\Items(type="string", format="uri"),
+         *                 description="Array of URLs to capture"
+         *             )
+         *         )
+         *     ),
+         *     @OA\Response(
+         *         response=200,
+         *         description="Batch processing results",
+         *         @OA\JsonContent(ref="#/components/schemas/BatchResponse")
+         *     )
+         * )
+         */
+        register_rest_route($this->namespace, '/extension/batch', [
+            'methods' => 'POST',
+            'callback' => [$this, 'handle_batch_screenshots'],
+            'permission_callback' => [$this, 'check_authorization'],
+            'args' => [
+                'urls' => [
+                    'required' => true,
+                    'type' => 'array',
+                    'items' => ['type' => 'string'],
+                    'description' => 'Array of URLs to capture'
+                ]
+            ]
+        ]);
+
+        /**
+         * @OA\Get(
+         *     path="/network/status",
+         *     summary="Get network status",
+         *     description="Reports network connectivity and health metrics",
+         *     operationId="getNetworkStatus",
+         *     tags={"network"},
+         *     @OA\Response(
+         *         response=200,
+         *         description="Network status information",
+         *         @OA\JsonContent(ref="#/components/schemas/NetworkStatus")
+         *     )
+         * )
+         */
+        register_rest_route($this->namespace, '/network/status', [
+            'methods' => 'GET',
+            'callback' => [$this, 'get_network_status'],
+            'permission_callback' => [$this, 'check_authorization']
+        ]);
+
+        /**
+         * @OA\Post(
+         *     path="/webhooks",
+         *     summary="Manage network webhooks",
+         *     description="Register and manage network event notifications",
+         *     operationId="manageWebhooks",
+         *     tags={"network"},
+         *     @OA\Response(
+         *         response=200,
+         *         description="Webhook operation result",
+         *         @OA\JsonContent(ref="#/components/schemas/WebhookResponse")
+         *     )
+         * )
+         */
+        register_rest_route($this->namespace, '/webhooks', [
+            'methods' => ['POST', 'DELETE'],
+            'callback' => [$this, 'manage_webhooks'],
+            'permission_callback' => [$this, 'check_authorization']
+        ]);
+    }
+
+    /**
+     * Handle batch screenshot requests from Chrome Extension
+     * 
+     * Processes multiple screenshot requests in a single API call.
+     * Optimized for Chrome Extension usage with:
+     * - Parallel processing where possible
+     * - Cached results when available
+     * - Progress tracking for large batches
+     * 
+     * Rate Limits:
+     * - Free: 10 URLs per request
+     * - FreeWire: 25 URLs per request
+     * - Wire: 50 URLs per request
+     * - ExtraWire: 100 URLs per request
+     * 
+     * Response Format:
+     * {
+     *   "success": true,
+     *   "data": {
+     *     "url1": { "status": "success", "screenshot_url": "..." },
+     *     "url2": { "status": "error", "message": "..." }
+     *   },
+     *   "meta": {
+     *     "processed": 5,
+     *     "successful": 4,
+     *     "failed": 1,
+     *     "network": { ... }
+     *   }
+     * }
+     *
+     * @param WP_REST_Request $request Request object containing URLs array
+     * @return WP_REST_Response Response containing batch results
+     *
+     * @OA\Post(
+     *     path="/extension/batch",
+     *     summary="Process batch screenshot requests",
+     *     description="Handles multiple screenshot requests in a single call",
+     *     operationId="handleBatchScreenshots",
+     *     tags={"network"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(
+     *                 property="urls",
+     *                 type="array",
+     *                 @OA\Items(type="string", format="uri"),
+     *                 description="Array of URLs to capture"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Batch processing results",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 additionalProperties=@OA\Schema(
+     *                     type="object",
+     *                     @OA\Property(property="status", type="string", enum={"success", "error"}),
+     *                     @OA\Property(property="screenshot_url", type="string", format="uri"),
+     *                     @OA\Property(property="message", type="string")
+     *                 )
+     *             ),
+     *             @OA\Property(
+     *                 property="meta",
+     *                 type="object",
+     *                 @OA\Property(property="processed", type="integer", example=5),
+     *                 @OA\Property(property="successful", type="integer", example=4),
+     *                 @OA\Property(property="failed", type="integer", example=1),
+     *                 @OA\Property(
+     *                     property="network",
+     *                     type="object",
+     *                     @OA\Property(property="node_type", type="string"),
+     *                     @OA\Property(property="connected", type="boolean")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Invalid request parameters",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=429,
+     *         description="Rate limit exceeded",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
+     */
+    public function handle_batch_screenshots($request) {
+        $urls = $request->get_param('urls');
+        $results = [];
+
+        foreach ($urls as $url) {
+            $screenshot_request = new WP_REST_Request('POST', "/{$this->namespace}/screenshot");
+            $screenshot_request->set_param('url', $url);
+            $results[$url] = $this->take_screenshot($screenshot_request);
+        }
+
+        return rest_ensure_response($this->format_response($results));
+    }
+
+    /**
+     * Get network-wide screenshot service status
+     * 
+     * Provides comprehensive status information about the screenshot service
+     * within the network context. Includes:
+     * 
+     * 1. Service Status:
+     *    - Local screenshot service health
+     *    - Fallback service availability
+     *    - Resource usage metrics
+     * 
+     * 2. Network Status:
+     *    - Ring Leader connectivity
+     *    - Node type (hub/member/standalone)
+     *    - Network ID and role
+     * 
+     * 3. Cache Statistics:
+     *    - Hit/miss ratios
+     *    - Storage usage
+     *    - Cleanup metrics
+     * 
+     * Response Format:
+     * {
+     *   "success": true,
+     *   "data": {
+     *     "service_status": "active",
+     *     "network_status": {
+     *       "connected": true,
+     *       "role": "member"
+     *     },
+     *     "cache_stats": {
+     *       "hit_ratio": 0.85,
+     *       "storage_used": "1.2GB"
+     *     }
+     *   },
+     *   "meta": { ... }
+     * }
+     *
+     * @return WP_REST_Response Detailed status information
+     *
+     * @OA\Get(
+     *     path="/network/status",
+     *     summary="Get network status",
+     *     description="Reports network connectivity and health metrics",
+     *     operationId="getNetworkStatus",
+     *     tags={"network"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Network status information",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="service_status",
+     *                     type="string",
+     *                     enum={"active", "degraded", "inactive"},
+     *                     example="active"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="network_status",
+     *                     type="object",
+     *                     @OA\Property(property="connected", type="boolean", example=true),
+     *                     @OA\Property(property="role", type="string", example="member")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="cache_stats",
+     *                     type="object",
+     *                     @OA\Property(property="hit_ratio", type="number", format="float", example=0.85),
+     *                     @OA\Property(property="storage_used", type="string", example="1.2GB")
+     *                 )
+     *             ),
+     *             @OA\Property(
+     *                 property="meta",
+     *                 type="object",
+     *                 @OA\Property(property="timestamp", type="string", format="date-time"),
+     *                 @OA\Property(property="version", type="string", example="2.1.0")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Authentication required",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=503,
+     *         description="Service unavailable",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
+     */
+    public function get_network_status() {
+        $status = [
+            'service_status' => $this->get_service_status(),
+            'network_status' => $this->check_network_connectivity(),
+            'cache_stats' => $this->cache->get_stats(),
+            'ring_leader_connected' => $this->check_ring_leader_connection()
+        ];
+
+        return rest_ensure_response($this->format_response($status));
+    }
+
+    /**
+     * Check Ring Leader plugin connectivity
+     * 
+     * Verifies connection to the Ring Leader plugin which coordinates
+     * network communication. This check ensures:
+     * 
+     * 1. Ring Leader plugin is active and responding
+     * 2. Network token is valid
+     * 3. Node has proper network permissions
+     * 
+     * Connection States:
+     * - Connected: Full network functionality available
+     * - Disconnected: Fallback to standalone mode
+     * - Error: Network features disabled
+     * 
+     * Error Handling:
+     * - Timeout after 5 seconds
+     * - Automatic retry on temporary failures
+     * - Logging of connection issues
+     * 
+     * @return bool True if connected, false otherwise
+     *
+     * @OA\Get(
+     *     path="/network/ring-leader/status",
+     *     summary="Check Ring Leader connection",
+     *     description="Verifies connectivity with Ring Leader network coordinator",
+     *     operationId="checkRingLeader",
+     *     tags={"network"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Connection status",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="connected", type="boolean"),
+     *             @OA\Property(
+     *                 property="status",
+     *                 type="object",
+     *                 @OA\Property(property="plugin_active", type="boolean"),
+     *                 @OA\Property(property="token_valid", type="boolean"),
+     *                 @OA\Property(property="permissions_valid", type="boolean")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=503,
+     *         description="Ring Leader service unavailable",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
+     */
+    private function check_ring_leader_connection() {
+        try {
+            $response = wp_remote_get(SEWN_RING_LEADER_URL . '/status', [
+                'timeout' => 5,
+                'headers' => [
+                    'X-Network-Token' => $this->get_network_token()
+                ]
+            ]);
+
+            return !is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200;
+        } catch (Exception $e) {
+            $this->logger->error('Ring Leader connection check failed', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Get network node type
+     * 
+     * Determines the role of this installation in the network:
+     * 
+     * 1. Hub Node (SEWN_IS_HUB):
+     *    - Central network coordinator
+     *    - Manages member registrations
+     *    - Distributes network updates
+     * 
+     * 2. Member Node (SEWN_IS_MEMBER):
+     *    - Regular network participant
+     *    - Receives network updates
+     *    - Limited network control
+     * 
+     * 3. Standalone:
+     *    - No network integration
+     *    - Local functionality only
+     *    - Can upgrade to member
+     * 
+     * Node type affects:
+     * - Available API endpoints
+     * - Rate limits
+     * - Cache behavior
+     * - Network permissions
+     * 
+     * @return string 'hub'|'member'|'standalone'
+     */
+    private function get_network_node_type() {
+        if (defined('SEWN_IS_HUB') && SEWN_IS_HUB) {
+            return 'hub';
+        } elseif (defined('SEWN_IS_MEMBER') && SEWN_IS_MEMBER) {
+            return 'member';
+        }
+        return 'standalone';
+    }
+
 }

@@ -1,25 +1,65 @@
 <?php
 
+/**
+ * Admin Class for Screenshot Management
+ * 
+ * Handles the WordPress admin interface for the screenshot service, including:
+ * - Script/style loading for admin pages
+ * - Screenshot testing interface
+ * - API key management
+ * - Service status display
+ */
 class SEWN_Admin {
+    /**
+     * Service for handling screenshot generation
+     * @var object
+     */
     private $screenshot_service;
+
+    /**
+     * Logger instance for tracking operations
+     * @var object
+     */
     private $logger;
 
+    /**
+     * Initialize admin functionality and set up WordPress hooks
+     *
+     * @param object $screenshot_service Service that handles screenshot generation
+     * @param object $logger Logger for tracking operations
+     */
     public function __construct($screenshot_service, $logger) {
         $this->screenshot_service = $screenshot_service;
         $this->logger = $logger;
+
+        // Add these lines to register AJAX handlers
+        add_action('wp_ajax_sewn_get_swagger_docs', [$this, 'handle_swagger_docs']);
+        add_action('wp_ajax_nopriv_sewn_get_swagger_docs', [$this, 'handle_swagger_docs']);
 
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
         add_action('admin_init', [$this, 'init_admin']);
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
     }
 
+    /**
+     * Initialize admin interface and log the action
+     */
     public function init_admin() {
         $this->logger->debug('Admin interface initialized');
     }
 
+    /**
+     * Load admin-specific scripts and styles
+     * Only loads on plugin-specific pages to avoid conflicts
+     *
+     * @param string $hook Current admin page hook
+     */
     public function enqueue_admin_scripts($hook) {
-        // Only load on our plugin page
-        if ($hook !== 'tools_page_sewn-screenshot-tester') {
+        // Add debug logging
+        error_log('Enqueuing admin scripts on hook: ' . $hook);
+
+        // Only load on our plugin pages
+        if (!in_array($hook, ['tools_page_sewn-screenshot-tester', 'sewn-screenshots_page_sewn-screenshots-api'])) {
             return;
         }
 
@@ -33,14 +73,16 @@ class SEWN_Admin {
         wp_enqueue_script(
             'sewn-admin-settings',
             plugins_url('assets/js/admin-settings.js', SEWN_PLUGIN_FILE),
-            ['jquery', 'jquery-ui-sortable'],
+            ['jquery'],
             SEWN_SCREENSHOTS_VERSION,
             true
         );
 
         wp_localize_script('sewn-admin-settings', 'sewn_settings', [
-            'nonce' => wp_create_nonce('sewn_screenshot_test'),
+            'rest_url' => rest_url(),
+            'rest_nonce' => wp_create_nonce('wp_rest'),
             'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('sewn_screenshot_test'),
             'is_production' => $this->screenshot_service->is_production_server()
         ]);
 
@@ -48,34 +90,42 @@ class SEWN_Admin {
             'hook' => $hook,
             'version' => SEWN_VERSION
         ]);
+
+        // Ensure dashicons are loaded
+        wp_enqueue_style('dashicons');
     }
 
+    /**
+     * Render the screenshot testing interface
+     * Provides a form for testing screenshot generation with various options
+     */
     public function render_tester_page() {
         if (!current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
-        $current_method = $this->screenshot_service->is_production_server() ? 'wkhtmltopdf' : 'API';
+        // Get current screenshot method from settings
+        $current_method = $this->settings->get_screenshot_method();
 
         ?>
         <div class="wrap">
             <h1>Screenshot Tester</h1>
             
-            <div class="notice notice-info">
-                <p>Current screenshot method: <strong><?php echo esc_html($current_method); ?></strong></p>
-                <?php if ($current_method === 'wkhtmltopdf'): ?>
-                    <p>Using local wkhtmltopdf installation</p>
-                <?php else: ?>
-                    <p>Using fallback API service</p>
-                <?php endif; ?>
-            </div>
-
             <div class="sewn-test-section">
+                <div class="notice notice-info">
+                    <p>Current screenshot method: <strong><?php echo esc_html($current_method); ?></strong></p>
+                    <?php if ($current_method === 'wkhtmltopdf'): ?>
+                        <p>Using local wkhtmltopdf installation</p>
+                    <?php else: ?>
+                        <p>Using fallback API service</p>
+                    <?php endif; ?>
+                </div>
+
                 <h2>Test Screenshot Service</h2>
                 
                 <div class="sewn-test-controls">
                     <input type="url" 
-                           id="sewn-test-url" 
+                           id="test-url" 
                            placeholder="Enter URL to test"
                            class="regular-text">
                     
@@ -142,6 +192,10 @@ class SEWN_Admin {
         $this->logger->debug('Tester page rendered');
     }
 
+    /**
+     * Render the API key management section
+     * Displays and manages API keys for multiple screenshot services
+     */
     private function render_api_key_section() {
         $services = [
             'screenshotmachine' => 'Screenshot Machine',
@@ -157,7 +211,7 @@ class SEWN_Admin {
             <div class="api-key-row">
                 <h3><?php echo esc_html($service_name); ?> API Key</h3>
                 <div class="api-key-field">
-                    <input type="password" 
+                    <input type="text" 
                            id="<?php echo esc_attr($option_name); ?>"
                            name="<?php echo esc_attr($option_name); ?>"
                            value="<?php echo esc_attr($current_key); ?>"
@@ -181,6 +235,12 @@ class SEWN_Admin {
         echo '</div>';
     }
 
+    /**
+     * Get the status of all screenshot services
+     * Checks availability of local and API-based services
+     *
+     * @return array Status of each screenshot service
+     */
     private function get_service_status() {
         $methods = [
             'wkhtmltopdf' => $this->screenshot_service->is_production_server(),
@@ -197,6 +257,10 @@ class SEWN_Admin {
         return $methods;
     }
 
+    /**
+     * Display the current status of all screenshot services
+     * Shows which services are available and configured
+     */
     public function render_service_status() {
         $methods = $this->get_service_status();
         ?>
@@ -217,14 +281,19 @@ class SEWN_Admin {
         <?php
     }
 
-    // Add the new render method for test results
+    /**
+     * Render the test results page
+     * Displays results from screenshot service tests
+     */
     public function render_test_results() {
-        // Instantiate and render test results
         $test_results = new SEWN_Test_Results($this->logger);
         $test_results->render_test_page();
     }
 
-    // Add new dashboard page render method
+    /**
+     * Render the main plugin dashboard
+     * Shows overview of screenshot service status and recent activity
+     */
     public function render_dashboard_page() {
         ?>
         <div class="wrap">
@@ -256,7 +325,10 @@ class SEWN_Admin {
         <?php
     }
 
-    // Add method for API settings page
+    /**
+     * Render the API settings page
+     * Manages API keys and service configuration
+     */
     public function render_api_settings_page() {
         ?>
         <div class="wrap">
@@ -266,7 +338,10 @@ class SEWN_Admin {
         <?php
     }
 
-    // Add method for recent activity
+    /**
+     * Display recent screenshot activity
+     * Shows the last 5 screenshots taken
+     */
     private function render_recent_activity() {
         $recent_screenshots = $this->screenshot_service->get_recent_screenshots(5);
         if (!empty($recent_screenshots)) {
@@ -280,7 +355,10 @@ class SEWN_Admin {
         }
     }
 
-    // Add method for test summary
+    /**
+     * Display summary of recent test results
+     * Shows pass/fail statistics for screenshot tests
+     */
     private function render_test_summary() {
         $test_results = new SEWN_Test_Results($this->logger);
         $summary = $test_results->get_latest_summary();
@@ -295,6 +373,10 @@ class SEWN_Admin {
         }
     }
 
+    /**
+     * Enqueue scripts for the admin interface
+     * Loads API tester functionality and localizes script data
+     */
     public function enqueue_scripts() {
         wp_enqueue_script(
             'sewn-api-tester',
@@ -317,5 +399,97 @@ class SEWN_Admin {
 
         // Add REST API support to the page
         wp_enqueue_script('wp-api');
+    }
+
+    /**
+     * Handle AJAX request for Swagger documentation
+     */
+    public function handle_swagger_docs() {
+        $start_time = microtime(true);
+        
+        try {
+            // Log request details
+            $this->logger->debug('Swagger docs request received', [
+                'method' => $_SERVER['REQUEST_METHOD'],
+                'headers' => getallheaders(),
+                'request' => $_REQUEST,
+                'memory_usage' => memory_get_usage(true)
+            ]);
+
+            // Verify nonce
+            $nonce_check = check_ajax_referer('sewn_swagger_docs', '_ajax_nonce', false);
+            $this->logger->debug('Nonce verification', [
+                'success' => $nonce_check !== false,
+                'nonce' => $_REQUEST['_ajax_nonce'] ?? 'not_set'
+            ]);
+
+            if (!$nonce_check) {
+                throw new Exception('Invalid nonce verification');
+            }
+
+            if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+                $this->logger->warning('Invalid request method', [
+                    'expected' => 'GET',
+                    'received' => $_SERVER['REQUEST_METHOD']
+                ]);
+                wp_send_json_error('Invalid request method', 400);
+                return;
+            }
+
+            // Start output buffering
+            ob_start();
+            
+            // Set headers
+            nocache_headers();
+            header('Content-Type: application/json; charset=utf-8');
+            
+            // Log headers
+            $this->logger->debug('Response headers set', [
+                'headers' => headers_list()
+            ]);
+
+            // Generate docs
+            $swagger = new SEWN_Swagger_Docs($this->logger);
+            $docs = $swagger->generate_docs();
+            
+            // Clean any output before our JSON
+            $buffered_output = ob_get_clean();
+            if (!empty($buffered_output)) {
+                $this->logger->warning('Unexpected output buffered', [
+                    'output' => $buffered_output
+                ]);
+            }
+            
+            // Validate JSON
+            $decoded = json_decode($docs);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new Exception('Invalid JSON generated: ' . json_last_error_msg());
+            }
+            
+            // Log success
+            $this->logger->info('Swagger documentation generated successfully', [
+                'execution_time' => microtime(true) - $start_time,
+                'memory_peak' => memory_get_peak_usage(true),
+                'spec_size' => strlen($docs)
+            ]);
+            
+            // Output the JSON
+            echo $docs;
+            
+        } catch (Exception $e) {
+            $this->logger->error('Swagger documentation generation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'execution_time' => microtime(true) - $start_time,
+                'memory_peak' => memory_get_peak_usage(true)
+            ]);
+            
+            wp_send_json_error([
+                'message' => 'Failed to generate API documentation',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+        
+        wp_die();
     }
 } 
