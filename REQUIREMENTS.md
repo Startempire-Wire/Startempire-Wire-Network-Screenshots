@@ -104,17 +104,19 @@
     * Configuration backup
 
 ### 1.8 Security Features
-* Basic security implementations
-  * Validates WordPress nonces
-  * Implements API key authentication
-  * Enforces membership tier restrictions
-  * Manages rate limiting
-  * Validates file operations
-  * Implements request signing
-  * Handles secure file storage
-  * Manages access tokens
-  * Logs security events
-  * Provides security reporting
+* Authentication implementation
+  * WordPress admin verification (highest priority)
+  * API key validation (direct consumers)
+  * Ring Leader token handling (network members)
+  * Free tier (public access) (no auth required)
+* Access control
+  * Clear tier-based quality limits
+  * Explicit free tier (public access) restrictions
+  * Chrome extension optimizations
+* Security monitoring
+  * Access logging
+  * Rate limit tracking
+  * Usage analytics
 
 ### 1.9 Testing Interface
 * Functional testing capabilities
@@ -174,7 +176,7 @@
     * Queue position monitoring
     * Service health indicators
   * Membership-based features
-    * Free tier preview limits
+    * Free tier (public access) preview limits
     * FreeWire quality settings
     * Wire premium features
     * ExtraWire priority handling
@@ -260,20 +262,19 @@
     * Load management 
 
 ### 2.22 API Access Management
-* Direct API Consumer Management
-  * API Key Generation
-    - Secure key creation
-    - Tier association
-    - Usage tracking
-    - Billing integration
-  * Rate Limiting
+* Access Tiers
+  * Free (non verified)
+    - No authentication required
+    - Basic rate limiting
+    - Standard quality preset
+  * Direct API Consumers
+    - API key authentication
     - Tier-based limits
-    - Burst handling
-    - Overage management
-  * Quality Control
-    - Resolution settings
-    - Format selection
-    - Compression levels
+  * Network Members
+    - Ring Leader token
+    - Membership-based access
+  * WordPress Admin
+    - Full system access
 
 ### 2.23 Service Integration
 * Ring Leader Integration

@@ -3,11 +3,17 @@
  * This controller handles all REST API endpoints for the screenshot service. It provides
  * functionality for taking screenshots, managing authentication, and handling cache operations.
  * 
+ * Authentication Levels:
+ * - Free (non verified): Basic public access, limited quality and rate
+ * - API Key: Direct external access with tier-based limits
+ * - Ring Leader: Network member access via token
+ * - WordPress Admin: Full testing access
+ * 
  * Endpoints available:
  * - POST /wp-json/sewn-screenshots/v1/screenshot
  *   Takes a new screenshot with optional parameters
- *   Rate limited: Yes
- *   Auth required: Yes
+ *   Rate limited: Yes (tier-based)
+ *   Auth required: No (defaults to free tier)
  *   Cache enabled: Yes
  * 
  * - GET /wp-json/sewn-screenshots/v1/preview/screenshot
@@ -255,6 +261,15 @@ class SEWN_REST_Controller extends WP_REST_Controller {
      * @since 2.1.0
      */
     private $network_cache;
+
+    // Add new constant for free tier settings
+    const FREE_TIER_SETTINGS = [
+        'resolution' => '640x360',
+        'format' => 'jpeg',
+        'compression' => 60,
+        'watermark' => true,
+        'rate_limit' => '10/hour'
+    ];
 
     /**
      * Constructor
@@ -2624,8 +2639,7 @@ class SEWN_REST_Controller extends WP_REST_Controller {
             add_filter('rest_pre_serve_request', function($value) {
                 header('Access-Control-Allow-Origin: *');
                 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-                header('Access-Control-Allow-Credentials: true');
-                header('Access-Control-Allow-Headers: Authorization, Content-Type, X-API-Key');
+                header('Access-Control-Allow-Headers: Authorization, Content-Type, X-API-Key, X-Ring-Leader-Token');
                 return $value;
             });
         });
@@ -3050,7 +3064,7 @@ class SEWN_REST_Controller extends WP_REST_Controller {
      *     "service_status": "active",
      *     "network_status": {
      *       "connected": true,
-     *       "role": "member"
+     *       "site_type": "member" // or "parent" or "ring_leader"
      *     },
      *     "cache_stats": {
      *       "hit_ratio": 0.85,
@@ -3087,6 +3101,8 @@ class SEWN_REST_Controller extends WP_REST_Controller {
      *                     property="network_status",
      *                     type="object",
      *                     @OA\Property(property="connected", type="boolean", example=true),
+     *                     @OA\Property(property="site_type", type="string", enum={"parent", "ring_leader", "member"}),
+     *                     @OA\Property(property="network_id", type="string", example="net_123456"),
      *                     @OA\Property(property="role", type="string", example="member")
      *                 ),
      *                 @OA\Property(
@@ -3214,7 +3230,15 @@ class SEWN_REST_Controller extends WP_REST_Controller {
                 ]
             ]);
 
-            return !is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200;
+            if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
+                $data = json_decode(wp_remote_retrieve_body($response), true);
+                return [
+                    'connected' => true,
+                    'site_type' => $this->get_network_node_type(),
+                    'network_id' => $data['network_id'] ?? null
+                ];
+            }
+            return false;
         } catch (Exception $e) {
             $this->logger->error('Ring Leader connection check failed', [
                 'error' => $e->getMessage()
@@ -3249,11 +3273,13 @@ class SEWN_REST_Controller extends WP_REST_Controller {
      * - Cache behavior
      * - Network permissions
      * 
-     * @return string 'hub'|'member'|'standalone'
+     * @return string 'parent'|'ring_leader'|'member'|'standalone'
      */
     private function get_network_node_type() {
-        if (defined('SEWN_IS_HUB') && SEWN_IS_HUB) {
-            return 'hub';
+        if (defined('SEWN_IS_PARENT_SITE') && SEWN_IS_PARENT_SITE) {
+            return 'parent';
+        } elseif (defined('SEWN_IS_RING_LEADER') && SEWN_IS_RING_LEADER) {
+            return 'ring_leader';
         } elseif (defined('SEWN_IS_MEMBER') && SEWN_IS_MEMBER) {
             return 'member';
         }
@@ -3267,17 +3293,23 @@ class SEWN_REST_Controller extends WP_REST_Controller {
      * @return bool|WP_Error True if authorized, WP_Error if not
      */
     private function check_auth($request) {
-        // Use existing API key/JWT logic first
+        // WordPress admin check first
+        if (current_user_can('manage_options')) {
+            return true;
+        }
+
+        // API key check
         if ($token = $request->get_header('X-API-Key')) {
             return $this->verify_api_key($token);
         }
         
-        // Add network check as another auth method
-        if ($this->ring_leader_client && ($token = $request->get_header('X-Ring-Leader-Token'))) {
+        // Ring Leader token check
+        if ($token = $request->get_header('X-Ring-Leader-Token')) {
             return $this->ring_leader_client->verify_token($token);
         }
-        
-        return new WP_Error('unauthorized', 'Valid authentication required');
+
+        // Default to free tier
+        return true;
     }
 
     /**
@@ -3293,10 +3325,10 @@ class SEWN_REST_Controller extends WP_REST_Controller {
             'data' => $data
         ];
         
-        // Add network info to existing data structure
         if ($this->ring_leader_client && $this->ring_leader_client->is_connected()) {
             $response['data']['network'] = [
                 'connected' => true,
+                'site_type' => $this->get_network_node_type(),
                 'network_id' => $this->ring_leader_client->get_network_id()
             ];
         }
@@ -3307,11 +3339,17 @@ class SEWN_REST_Controller extends WP_REST_Controller {
     /**
      * Enhanced rate limiting
      * 
-     * @param string $key API key or token
+     * @param string $key API key or token, null for free tier
      * @return bool|WP_Error True if within limits, WP_Error if exceeded
      */
-    private function apply_rate_limit($key) {
-        // Get tier from either API key or network membership
+    private function apply_rate_limit($key = null) {
+        // Handle free tier rate limiting
+        if ($key === null) {
+            $client_id = $_SERVER['REMOTE_ADDR'];
+            return $this->rate_limiter->check_limit($client_id, self::FREE_TIER_SETTINGS['rate_limit']);
+        }
+
+        // Existing rate limiting logic
         $tier = $this->ring_leader_client && $this->ring_leader_client->is_network_key($key)
             ? $this->ring_leader_client->get_network_tier($key)
             : $this->get_api_key_tier($key);
