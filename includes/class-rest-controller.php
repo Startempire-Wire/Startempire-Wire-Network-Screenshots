@@ -332,9 +332,9 @@ class SEWN_REST_Controller extends WP_REST_Controller {
         
         // Add network integration
         try {
-            $this->ring_leader_client = new SEWN_Ring_Leader_Client($logger);
-            $this->quality_handler = new SEWN_Quality_Handler($logger);
-            $this->network_cache = new SEWN_Network_Cache($logger);
+            // $this->ring_leader_client = new SEWN_Ring_Leader_Client($logger);
+            // $this->quality_handler = new SEWN_Quality_Handler($logger);
+            // $this->network_cache = new SEWN_Network_Cache($logger);
         } catch (Exception $e) {
             $this->logger->warning('Network features unavailable', [
                 'error' => $e->getMessage()
@@ -3318,23 +3318,23 @@ class SEWN_REST_Controller extends WP_REST_Controller {
      * @param mixed $data Response data
      * @return WP_REST_Response
      */
-    private function format_response($data) {
-        $response = [
-            'code' => 'success',
-            'message' => '',
-            'data' => $data
-        ];
+    // private function format_response($data) {
+    //     $response = [
+    //         'code' => 'success',
+    //         'message' => '',
+    //         'data' => $data
+    //     ];
         
-        if ($this->ring_leader_client && $this->ring_leader_client->is_connected()) {
-            $response['data']['network'] = [
-                'connected' => true,
-                'site_type' => $this->get_network_node_type(),
-                'network_id' => $this->ring_leader_client->get_network_id()
-            ];
-        }
+    //     if ($this->ring_leader_client && $this->ring_leader_client->is_connected()) {
+    //         $response['data']['network'] = [
+    //             'connected' => true,
+    //             'site_type' => $this->get_network_node_type(),
+    //             'network_id' => $this->ring_leader_client->get_network_id()
+    //         ];
+    //     }
         
-        return new WP_REST_Response($response);
-    }
+    //     return new WP_REST_Response($response);
+    // }
 
     /**
      * Enhanced rate limiting
