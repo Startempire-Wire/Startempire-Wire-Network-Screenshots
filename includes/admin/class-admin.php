@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Admin Class for Screenshot Management
  * 

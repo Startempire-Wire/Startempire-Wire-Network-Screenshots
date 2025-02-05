@@ -1,4 +1,14 @@
 <?php
+/**
+ * Location: Admin → Dashboard
+ * Dependencies: SEWN_API_Tester, SEWN_Settings, SEWN_Screenshot_Service
+ * Variables & Classes: $api_manager, SEWN_Dashboard
+ * 
+ * Central hub for plugin statistics and system monitoring. Displays real-time metrics for screenshot
+ * cache performance and API usage. Integrates with WordPress admin UI components to show storage
+ * utilization and recent capture activity.
+ */
+
 if (!defined('ABSPATH')) exit;
 
 class SEWN_Dashboard {

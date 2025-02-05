@@ -1,4 +1,14 @@
 <?php
+/**
+ * Location: Admin → Tools → API Tester
+ * Dependencies: SEWN_Screenshot_Service, SEWN_Settings
+ * Variables & Classes: $screenshot_service, SEWN_API_Tester
+ * 
+ * Provides interactive interface for testing API endpoints and service configurations. Validates API
+ * credentials and connection parameters through diagnostic checks. Generates visual test results
+ * for both local and remote screenshot capture services.
+ */
+
 class SEWN_API_Tester {
     private $logger;
     private $settings;

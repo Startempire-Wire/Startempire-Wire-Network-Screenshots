@@ -1,4 +1,14 @@
 <?php
+/**
+ * Location: Admin menu system
+ * Dependencies: SEWN_Dashboard, SEWN_API_Tester, SEWN_Settings
+ * Variables & Classes: $plugin_slug, SEWN_Menu_Manager
+ * 
+ * Manages plugin admin menu structure and navigation permissions. Registers dashboard submenu items
+ * based on user capabilities and feature availability. Logs menu access patterns for security
+ * auditing and usage analytics.
+ */
+
 if (!defined('ABSPATH')) exit;
 
 class SEWN_Menu_Manager {

@@ -1,4 +1,15 @@
 <?php
+
+/**
+ * Location: Admin → Settings
+ * Dependencies: SEWN_API_Quota_Checker, SEWN_API_Logger
+ * Variables & Classes: $options_group, SEWN_Settings
+ * 
+ * Handles plugin configuration storage and service health monitoring. Implements settings validation
+ * for API keys and service endpoints. Provides UI for managing screenshot capture modes and
+ * third-party service integrations.
+ */
+
 if (!defined('ABSPATH')) exit;
 
 class SEWN_Settings {

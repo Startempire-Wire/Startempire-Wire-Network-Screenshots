@@ -1,14 +1,20 @@
 <?php
+/**
+ * Location: Admin → API Documentation
+ * Dependencies: OpenAPI PHP Library
+ * Variables & Classes: OA\OpenApi, SEWN_Swagger_Docs
+ * 
+ * Generates interactive API documentation using OpenAPI specification. Handles dynamic documentation
+ * updates through AJAX endpoints. Secures API spec access with WordPress capability checks and
+ * nonce validation.
+ */
 
 // Early exit if accessed directly
 if (!defined('ABSPATH')) exit;
 
-use OpenApi\Generator;
 use OpenApi\Annotations as OA;
+use OpenApi\Generator;
 
-/**
- * Handles generation and display of API documentation using Swagger/OpenAPI
- */
 class SEWN_Swagger_Docs {
     /**
      * Logger instance

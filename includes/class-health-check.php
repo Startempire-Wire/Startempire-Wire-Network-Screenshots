@@ -1,7 +1,12 @@
 <?php
 /**
- * Health Check Class
- * Handles system health monitoring and reporting
+ * Location: System monitoring
+ * Dependencies: SEWN_API_Logger, WordPress HTTP API
+ * Variables & Classes: SEWN_Health_Check
+ * 
+ * Performs routine system health checks and service availability monitoring. Tracks PHP
+ * environment compatibility and WordPress configuration settings. Generates actionable
+ * status reports for core dependencies and external API services.
  */
 
 if (!defined('ABSPATH')) exit;

@@ -1,4 +1,13 @@
 <?php
+/**
+ * Location: Core logging system
+ * Dependencies: WordPress uploads system
+ * Variables & Classes: $log_file, SEWN_API_Logger
+ * 
+ * Centralized logging mechanism for API interactions and system events. Implements log rotation
+ * and file size management. Provides severity-based logging with context-aware message formatting
+ * for debugging and audit trails.
+ */
 class SEWN_API_Logger {
     private $log_file;
 

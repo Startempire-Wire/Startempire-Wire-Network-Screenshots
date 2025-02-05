@@ -1,7 +1,12 @@
 <?php
 /**
- * Admin Notifications Class
- * Handles WordPress admin notifications
+ * Location: Admin interface
+ * Dependencies: SEWN_API_Logger
+ * Variables & Classes: $logger, SEWN_Admin_Notifications
+ * 
+ * Handles WordPress admin notification display and management. Integrates with plugin logging system
+ * to track notification events and user interactions. Provides methods for rendering dismissible alerts
+ * and bulk notification cleanup operations.
  */
 
 if (!defined('ABSPATH')) exit;

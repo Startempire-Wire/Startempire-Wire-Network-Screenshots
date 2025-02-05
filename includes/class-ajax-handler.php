@@ -1,6 +1,12 @@
 <?php
 /**
- * AJAX Handler Class
+ * Location: Frontend/Admin AJAX
+ * Dependencies: SEWN_Screenshot_Service
+ * Variables & Classes: $nonce_action, SEWN_Ajax_Handler
+ * 
+ * Processes screenshot capture requests from both admin and frontend interfaces. Validates user
+ * permissions and request nonces for security. Handles error logging and JSON response formatting
+ * for client-side error handling.
  */
 class SEWN_Ajax_Handler {
     private $screenshot_service;

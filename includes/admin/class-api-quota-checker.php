@@ -1,4 +1,14 @@
 <?php
+/**
+ * Location: Admin → API Management
+ * Dependencies: SEWN_API_Logger, External API services
+ * Variables & Classes: $cache_duration, SEWN_API_Quota_Checker
+ * 
+ * Monitors and verifies API usage limits across integrated screenshot services. Implements cache-based
+ * quota tracking to prevent service overages. Provides fallback handling for different API providers
+ * including URL2PNG and Screenshot Machine.
+ */
+
 if (!defined('ABSPATH')) exit;
 
 class SEWN_API_Quota_Checker {

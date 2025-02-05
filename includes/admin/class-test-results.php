@@ -1,4 +1,14 @@
 <?php
+/**
+ * Location: Admin → Tools → Test Results
+ * Dependencies: SEWN_API_Logger, WordPress AJAX
+ * Variables & Classes: $test_results, SEWN_Test_Results
+ * 
+ * Manages automated test suite execution and result storage. Provides diagnostic tools for UI
+ * components and API integrations. Logs detailed test outcomes with timestamped records for
+ * troubleshooting and quality assurance.
+ */
+
 if (!defined('ABSPATH')) exit;
 
 class SEWN_Test_Results {

@@ -1,4 +1,13 @@
 <?php
+/**
+ * Location: Plugin asset management
+ * Dependencies: WordPress media library
+ * Variables & Classes: SEWN_Assets (static)
+ * 
+ * Manages plugin CSS/JS assets and third-party library dependencies. Handles asset versioning
+ * and integrity checks. Automatically creates required directories during plugin activation
+ * and verifies file permissions.
+ */
 if (!defined('ABSPATH')) exit;
 
 class SEWN_Assets {
