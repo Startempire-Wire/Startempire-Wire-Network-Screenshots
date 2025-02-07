@@ -8,7 +8,8 @@
  * permissions and request nonces for security. Handles error logging and JSON response formatting
  * for client-side error handling.
  */
-class SEWN_Ajax_Handler {
+
+ class SEWN_Ajax_Handler {
     private $screenshot_service;
     private $logger;
     private $nonce_action = 'sewn_ajax_nonce';
